@@ -131,6 +131,7 @@ jobs:
         with:
           name: ${{ env.BINARY_NAME }}-${{ matrix.os }}-${{ matrix.arch }}
           path: |
+            build/${{ env.BINARY_NAME }}${{ matrix.ext }}
             dist/${{ env.BINARY_NAME }}_${{ github.ref_name }}_${{ matrix.os }}_${{ matrix.arch }}.tar.gz
             dist/${{ env.BINARY_NAME }}_${{ github.ref_name }}_${{ matrix.os }}_${{ matrix.arch }}.zip
           if-no-files-found: ignore
@@ -157,11 +158,20 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
+          # Move arquivos compactados para o diretório raiz
           find . -type f -name "*.tar.gz" -exec mv -f {} . \; || true
           find . -type f -name "*.zip"    -exec mv -f {} . \; || true
+          
+          # Copia binários diretos e renomeia para facilitar download
+          find . -name "${{ env.BINARY_NAME }}" -type f -exec cp {} ${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64 \; || true
+          find . -name "${{ env.BINARY_NAME }}" -type f -path "*arm64*" -exec cp {} ${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64 \; || true
+          
+          # Remove diretórios temporários
           find . -mindepth 1 -type d -exec rm -rf {} + || true
+          
+          # Gera checksums para todos os arquivos
           shopt -s nullglob
-          files=( *.tar.gz *.zip )
+          files=( *.tar.gz *.zip ${{ env.BINARY_NAME }}_* )
           if (( ${#files[@]} )); then
             sha256sum "${files[@]}" > checksums.txt
           else
@@ -178,20 +188,134 @@ jobs:
           files: |
             dist/*.tar.gz
             dist/*.zip
+            dist/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64
+            dist/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64
             dist/checksums.txt
           body: |
             ## Harbor CLI ${{ github.ref_name }}
 
-            ### Instalação rápida
+            **HarborCtl** é uma ferramenta de linha de comando para gerenciar e implantar serviços usando Docker Compose com funcionalidades avançadas.
 
-            **Linux (amd64/arm64):**
+            ### 📥 Instalação
+
+            #### Instalação Super Rápida (Binário Direto)
+
+            **Para amd64 (Intel/AMD):**
             ```bash
-            OS=linux
-            ARCH=$(uname -m); [[ "$ARCH" == "x86_64" ]] && ARCH=amd64
-            curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_${OS}_${ARCH}.tar.gz -o ${OS}-${ARCH}.tgz
-            tar -xzf ${OS}-${ARCH}.tgz ${BINARY_NAME}
-            sudo install -m 0755 ${BINARY_NAME} /usr/local/bin/${BINARY_NAME}
-            ${BINARY_NAME} --version
+            sudo curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64 -o /usr/local/bin/${{ env.BINARY_NAME }} && sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
+            ```
+
+            **Para arm64 (ARM64):**
+            ```bash
+            sudo curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64 -o /usr/local/bin/${{ env.BINARY_NAME }} && sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
+            ```
+
+            #### Instalação Automática (Arquivo Compactado)
+
+            **Para amd64 (Intel/AMD):**
+            ```bash
+            curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64.tar.gz | sudo tar -xzC /usr/local/bin ${{ env.BINARY_NAME }}
+            ```
+
+            **Para arm64 (ARM64/Apple Silicon em servidores Linux):**
+            ```bash
+            curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64.tar.gz | sudo tar -xzC /usr/local/bin ${{ env.BINARY_NAME }}
+            ```
+
+            #### Instalação Manual
+
+            1. **Baixe o arquivo para sua arquitetura:**
+               ```bash
+               # Para amd64
+               wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64.tar.gz
+               
+               # Para arm64
+               wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64.tar.gz
+               ```
+
+            2. **Extraia e instale:**
+               ```bash
+               # Substitua ARQUIVO.tar.gz pelo arquivo baixado
+               tar -xzf ARQUIVO.tar.gz
+               sudo mv ${{ env.BINARY_NAME }} /usr/local/bin/
+               sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
+               ```
+
+            #### Detectar Arquitetura Automaticamente
+
+            Se não souber sua arquitetura, use este comando que detecta automaticamente:
+            ```bash
+            ARCH=$(uname -m)
+            case $ARCH in
+                x86_64) ARCH="amd64" ;;
+                aarch64|arm64) ARCH="arm64" ;;
+                *) echo "Arquitetura não suportada: $ARCH" && exit 1 ;;
+            esac
+            
+            curl -sSLf "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_${ARCH}.tar.gz" | sudo tar -xzC /usr/local/bin ${{ env.BINARY_NAME }}
+            ```
+
+            #### Para Scripts e Automação
+
+            **Download direto do binário (sem descompactação):**
+            ```bash
+            # Auto-detecta arquitetura e baixa o binário direto
+            ARCH=$(uname -m)
+            case $ARCH in
+                x86_64) ARCH="amd64" ;;
+                aarch64|arm64) ARCH="arm64" ;;
+                *) echo "Arquitetura não suportada: $ARCH" && exit 1 ;;
+            esac
+            
+            # Download para uso local (não instala no sistema)
+            curl -sSLf "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_${ARCH}" -o ${{ env.BINARY_NAME }}
+            chmod +x ${{ env.BINARY_NAME }}
+            ./${{ env.BINARY_NAME }} --version
+            ```
+
+            **Para CI/CD e containers:**
+            ```bash
+            # Em Dockerfile ou scripts CI/CD
+            RUN curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64 -o /usr/local/bin/${{ env.BINARY_NAME }} && chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
+            ```
+
+            ### ✅ Verificar Instalação
+
+            Após a instalação, verifique se funcionou:
+            ```bash
+            ${{ env.BINARY_NAME }} --version
+            ${{ env.BINARY_NAME }} --help
+            ```
+
+            ### 🔒 Verificação de Integridade (Opcional)
+
+            Para verificar a integridade dos arquivos baixados:
+            ```bash
+            # Baixe o arquivo de checksums
+            wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/checksums.txt
+            
+            # Verifique o arquivo baixado
+            sha256sum -c checksums.txt --ignore-missing
+            ```
+
+            ### 🗑️ Desinstalação
+
+            Para remover o HarborCtl:
+            ```bash
+            sudo rm /usr/local/bin/${{ env.BINARY_NAME }}
+            ```
+
+            ### 📋 Requisitos do Sistema
+
+            - **SO:** Linux (qualquer distribuição)
+            - **Arquitetura:** amd64 (x86_64) ou arm64 (aarch64)
+            - **Permissões:** sudo/root para instalação em `/usr/local/bin`
+
+            ### 🚀 Primeiros Passos
+
+            Após a instalação, consulte a documentação para começar:
+            ```bash
+            ${{ env.BINARY_NAME }} docs
             ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
