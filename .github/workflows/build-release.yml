@@ -111,7 +111,7 @@ jobs:
           set -euo pipefail
           mkdir -p build dist
           OUT="build/${{ env.BINARY_NAME }}${{ matrix.ext }}"
-          go build -trimpath -ldflags="-s -w" -o "$OUT" .
+          go build -trimpath -ldflags="-s -w" -o "$OUT" ./cmd/harborctl
 
       - name: Package artifact
         shell: bash
