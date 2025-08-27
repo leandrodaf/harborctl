@@ -6,10 +6,10 @@ import (
 	"os/exec"
 )
 
-// executor implementa Executor
+// executor implements Executor
 type executor struct{}
 
-// NewExecutor cria um novo executor Docker
+// NewExecutor creates a new Docker executor
 func NewExecutor() Executor {
 	return &executor{}
 }
@@ -53,12 +53,12 @@ func (e *executor) run(ctx context.Context, name string, args ...string) error {
 	return cmd.Run()
 }
 
-// service implementa Service
+// service implements Service
 type service struct {
 	executor Executor
 }
 
-// NewService cria um novo serviço Docker
+// NewService creates a new Docker service
 func NewService(executor Executor) Service {
 	return &service{
 		executor: executor,

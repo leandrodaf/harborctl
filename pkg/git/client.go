@@ -9,48 +9,48 @@ import (
 	"strings"
 )
 
-// Client implementa operações git com segurança
+// Client implements secure git operations
 type Client struct{}
 
-// NewClient cria um novo cliente git
+// NewClient creates a new git client
 func NewClient() *Client {
 	return &Client{}
 }
 
-// Clone clona um repositório
+// Clone clones a repository
 func (c *Client) Clone(ctx context.Context, url, path, token string) error {
-	// Validar URL
+	// Validate URL
 	if err := c.validateGitURL(url); err != nil {
-		return fmt.Errorf("URL inválida: %w", err)
+		return fmt.Errorf("invalid URL: %w", err)
 	}
 
-	// Preparar comando
+	// Prepare command
 	var cmd *exec.Cmd
 	if token != "" {
-		// Adicionar token para autenticação
+		// Add token for authentication
 		authenticatedURL := c.addTokenToURL(url, token)
 		cmd = exec.CommandContext(ctx, "git", "clone", authenticatedURL, path)
 	} else {
 		cmd = exec.CommandContext(ctx, "git", "clone", url, path)
 	}
 
-	// Executar comando
+	// Execute command
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("erro ao clonar repositório: %s", string(output))
+		return fmt.Errorf("error cloning repository: %s", string(output))
 	}
 
 	return nil
 }
 
-// Pull atualiza um repositório existente
+// Pull updates an existing repository
 func (c *Client) Pull(ctx context.Context, path, branch string) error {
-	// Verificar se é um repositório git válido
+	// Check if it's a valid git repository
 	if !c.isValidGitRepo(path) {
-		return fmt.Errorf("não é um repositório git válido: %s", path)
+		return fmt.Errorf("not a valid git repository: %s", path)
 	}
 
-	// Mudar para o diretório
+	// Change to directory
 	oldDir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -63,49 +63,49 @@ func (c *Client) Pull(ctx context.Context, path, branch string) error {
 	}()
 
 	if err := os.Chdir(path); err != nil {
-		return fmt.Errorf("erro ao acessar diretório: %w", err)
+		return fmt.Errorf("error accessing directory: %w", err)
 	}
 
-	// Checkout da branch se especificada
+	// Checkout branch if specified
 	if branch != "" {
 		cmd := exec.CommandContext(ctx, "git", "checkout", branch)
 		if output, err := cmd.CombinedOutput(); err != nil {
-			return fmt.Errorf("erro ao fazer checkout da branch %s: %s", branch, string(output))
+			return fmt.Errorf("error checking out branch %s: %s", branch, string(output))
 		}
 	}
 
 	// Pull
 	cmd := exec.CommandContext(ctx, "git", "pull", "origin")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("erro ao fazer pull: %s", string(output))
+		return fmt.Errorf("error pulling: %s", string(output))
 	}
 
 	return nil
 }
 
-// GetLatestCommit obtém o hash do último commit
+// GetLatestCommit gets the latest commit hash
 func (c *Client) GetLatestCommit(ctx context.Context, path string) (string, error) {
 	if !c.isValidGitRepo(path) {
-		return "", fmt.Errorf("não é um repositório git válido: %s", path)
+		return "", fmt.Errorf("not a valid git repository: %s", path)
 	}
 
 	cmd := exec.CommandContext(ctx, "git", "-C", path, "rev-parse", "HEAD")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("erro ao obter commit: %w", err)
+		return "", fmt.Errorf("error getting commit: %w", err)
 	}
 
 	return strings.TrimSpace(string(output)), nil
 }
 
-// validateGitURL valida uma URL git
+// validateGitURL validates a git URL
 func (c *Client) validateGitURL(url string) error {
-	// Verificar se é uma URL válida
+	// Check if URL is valid
 	if url == "" {
-		return fmt.Errorf("URL vazia")
+		return fmt.Errorf("empty URL")
 	}
 
-	// Verificar protocolos permitidos
+	// Check allowed protocols
 	validPrefixes := []string{
 		"https://github.com/",
 		"https://gitlab.com/",
@@ -120,10 +120,10 @@ func (c *Client) validateGitURL(url string) error {
 		}
 	}
 
-	return fmt.Errorf("URL não está na lista de permitidas")
+	return fmt.Errorf("URL not in allowed list")
 }
 
-// addTokenToURL adiciona token de autenticação à URL
+// addTokenToURL adds authentication token to URL
 func (c *Client) addTokenToURL(url, token string) string {
 	if strings.HasPrefix(url, "https://github.com/") {
 		return strings.Replace(url, "https://", fmt.Sprintf("https://%s@", token), 1)
@@ -134,7 +134,7 @@ func (c *Client) addTokenToURL(url, token string) string {
 	return url
 }
 
-// isValidGitRepo verifica se um diretório é um repositório git válido
+// isValidGitRepo checks if a directory is a valid git repository
 func (c *Client) isValidGitRepo(path string) bool {
 	gitDir := filepath.Join(path, ".git")
 	if stat, err := os.Stat(gitDir); err == nil {

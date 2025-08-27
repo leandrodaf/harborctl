@@ -5,10 +5,10 @@ import (
 	"os"
 )
 
-// fileSystem implementa FileSystem
+// fileSystem implements FileSystem
 type fileSystem struct{}
 
-// NewFileSystem cria um novo filesystem
+// NewFileSystem creates a new filesystem
 func NewFileSystem() FileSystem {
 	return &fileSystem{}
 }
@@ -30,12 +30,12 @@ func (fs *fileSystem) MkdirAll(path string, perm int) error {
 	return os.MkdirAll(path, os.FileMode(perm))
 }
 
-// configLoader implementa ConfigLoader
+// configLoader implements ConfigLoader
 type configLoader struct {
 	fs FileSystem
 }
 
-// NewConfigLoader cria um novo config loader
+// NewConfigLoader creates a new config loader
 func NewConfigLoader(fs FileSystem) ConfigLoader {
 	return &configLoader{fs: fs}
 }

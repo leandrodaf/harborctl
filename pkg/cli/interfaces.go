@@ -2,7 +2,7 @@ package cli
 
 import "context"
 
-// Command representa um comando da CLI
+// Command represents a CLI command
 type Command interface {
 	Name() string
 	Description() string

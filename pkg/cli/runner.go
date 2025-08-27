@@ -6,13 +6,13 @@ import (
 	"os"
 )
 
-// runner implementa Runner
+// runner implements Runner
 type runner struct {
 	commands map[string]Command
 	output   Output
 }
 
-// NewRunner cria um novo runner
+// NewRunner creates a new runner
 func NewRunner(output Output) Runner {
 	return &runner{
 		commands: make(map[string]Command),
@@ -20,23 +20,23 @@ func NewRunner(output Output) Runner {
 	}
 }
 
-// Register registra um comando
+// Register registers a command
 func (r *runner) Register(cmd Command) {
 	r.commands[cmd.Name()] = cmd
 }
 
-// Run executa um comando
+// Run executes a command
 func (r *runner) Run(ctx context.Context, args []string) error {
 	if len(args) < 1 {
 		r.showUsage()
-		return fmt.Errorf("comando não especificado")
+		return fmt.Errorf("command not specified")
 	}
 
 	cmdName := args[0]
 	cmd, exists := r.commands[cmdName]
 	if !exists {
 		r.showUsage()
-		return fmt.Errorf("comando desconhecido: %s", cmdName)
+		return fmt.Errorf("unknown command: %s", cmdName)
 	}
 
 	return cmd.Execute(ctx, args[1:])

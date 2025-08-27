@@ -63,7 +63,7 @@ func (m *manager) Validate(ctx context.Context, stack *Stack) error {
 
 func (m *manager) Create(ctx context.Context, path string, options CreateOptions) error {
 	if m.fs.Exists(path) {
-		return errors.New("stack.yml já existe")
+		return errors.New("stack.yml already exists")
 	}
 
 	stack := &Stack{

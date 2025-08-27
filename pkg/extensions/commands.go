@@ -8,12 +8,12 @@ import (
 	"github.com/leandrodaf/harborctl/pkg/cli"
 )
 
-// StatusCommand implementa um comando de status
+// StatusCommand implements a status command
 type StatusCommand struct {
 	output cli.Output
 }
 
-// NewStatusCommand cria um novo comando de status
+// NewStatusCommand creates a new status command
 func NewStatusCommand(output cli.Output) cli.Command {
 	return &StatusCommand{
 		output: output,
@@ -25,34 +25,34 @@ func (c *StatusCommand) Name() string {
 }
 
 func (c *StatusCommand) Description() string {
-	return "Mostra o status dos serviços"
+	return "Shows services status"
 }
 
 func (c *StatusCommand) Execute(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("status", flag.ExitOnError)
 
 	var composePath string
-	fs.StringVar(&composePath, "f", ".deploy/compose.generated.yml", "arquivo compose")
+	fs.StringVar(&composePath, "f", ".deploy/compose.generated.yml", "compose file")
 
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	c.output.Info("🔍 Verificando status dos serviços...")
+	c.output.Info("🔍 Checking services status...")
 
-	// Aqui você poderia implementar a lógica real de verificação
-	// Por exemplo, usando docker ps, docker compose ps, etc.
+	// Here you could implement the real verification logic
+	// For example, using docker ps, docker compose ps, etc.
 
-	c.output.Info("✅ Todos os serviços estão rodando")
+	c.output.Info("✅ All services are running")
 	return nil
 }
 
-// LogsCommand implementa um comando para visualizar logs
+// LogsCommand implements a command to view logs
 type LogsCommand struct {
 	output cli.Output
 }
 
-// NewLogsCommand cria um novo comando de logs
+// NewLogsCommand creates a new logs command
 func NewLogsCommand(output cli.Output) cli.Command {
 	return &LogsCommand{
 		output: output,
@@ -64,7 +64,7 @@ func (c *LogsCommand) Name() string {
 }
 
 func (c *LogsCommand) Description() string {
-	return "Mostra os logs dos serviços"
+	return "Shows services logs"
 }
 
 func (c *LogsCommand) Execute(ctx context.Context, args []string) error {
@@ -73,23 +73,23 @@ func (c *LogsCommand) Execute(ctx context.Context, args []string) error {
 	var service, composePath string
 	var follow bool
 
-	fs.StringVar(&service, "service", "", "nome do serviço")
-	fs.StringVar(&composePath, "f", ".deploy/compose.generated.yml", "arquivo compose")
-	fs.BoolVar(&follow, "follow", false, "seguir os logs")
+	fs.StringVar(&service, "service", "", "service name")
+	fs.StringVar(&composePath, "f", ".deploy/compose.generated.yml", "compose file")
+	fs.BoolVar(&follow, "follow", false, "follow logs")
 
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
 	if service == "" {
-		c.output.Error("Especifique um serviço com --service")
-		return fmt.Errorf("serviço é obrigatório")
+		c.output.Error("Specify a service with --service")
+		return fmt.Errorf("service is required")
 	}
 
-	c.output.Infof("📋 Mostrando logs do serviço: %s", service)
+	c.output.Infof("📋 Showing logs for service: %s", service)
 
-	// Aqui você implementaria a lógica real de logs
-	// Por exemplo: docker compose logs -f service-name
+	// Here you would implement the real logs logic
+	// For example: docker compose logs -f service-name
 
 	return nil
 }

@@ -47,7 +47,7 @@ func (c *scaleCommand) Execute(ctx context.Context, args []string) error {
 
 	remainingArgs := fs.Args()
 	if len(remainingArgs) == 0 {
-		return fmt.Errorf("especifique o serviço e replicas: harborctl scale service=replicas")
+		return fmt.Errorf("specify service and replicas: harborctl scale service=replicas")
 	}
 
 	// Parse service=replicas
@@ -55,19 +55,19 @@ func (c *scaleCommand) Execute(ctx context.Context, args []string) error {
 	for _, arg := range remainingArgs {
 		parts := parseScaleArg(arg)
 		if len(parts) != 2 {
-			return fmt.Errorf("formato inválido: %s (use service=replicas)", arg)
+			return fmt.Errorf("invalid format: %s (use service=replicas)", arg)
 		}
 
 		service := parts[0]
 		replicas, err := strconv.Atoi(parts[1])
 		if err != nil {
-			return fmt.Errorf("replicas inválidas para %s: %v", service, err)
+			return fmt.Errorf("invalid replicas for %s: %v", service, err)
 		}
 
 		scaleSpecs[service] = replicas
 	}
 
-	// Execute scaling usando docker compose
+	// Execute scaling using docker compose
 	for service, replicas := range scaleSpecs {
 		c.output.Infof("Escalando %s para %d replicas...", service, replicas)
 

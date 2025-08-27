@@ -2,7 +2,7 @@ package fs
 
 import "context"
 
-// FileSystem abstrai operações de sistema de arquivos
+// FileSystem abstracts filesystem operations
 type FileSystem interface {
 	ReadFile(path string) ([]byte, error)
 	WriteFile(path string, data []byte, perm int) error
@@ -10,12 +10,12 @@ type FileSystem interface {
 	MkdirAll(path string, perm int) error
 }
 
-// ConfigLoader carrega configurações
+// ConfigLoader loads configurations
 type ConfigLoader interface {
 	Load(ctx context.Context, path string) ([]byte, error)
 }
 
-// TemplateRenderer renderiza templates
+// TemplateRenderer renders templates
 type TemplateRenderer interface {
 	Render(ctx context.Context, template string, data interface{}) ([]byte, error)
 }

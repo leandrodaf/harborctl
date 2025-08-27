@@ -7,13 +7,13 @@ import (
 	"github.com/leandrodaf/harborctl/pkg/cli"
 )
 
-// LoggingMiddleware adiciona logging aos comandos
+// LoggingMiddleware adds logging to commands
 type LoggingMiddleware struct {
 	output cli.Output
 	next   cli.Command
 }
 
-// NewLoggingMiddleware cria um middleware de logging
+// NewLoggingMiddleware creates a logging middleware
 func NewLoggingMiddleware(next cli.Command, output cli.Output) cli.Command {
 	return &LoggingMiddleware{
 		output: output,
@@ -31,27 +31,27 @@ func (m *LoggingMiddleware) Description() string {
 
 func (m *LoggingMiddleware) Execute(ctx context.Context, args []string) error {
 	start := time.Now()
-	m.output.Infof("Iniciando comando: %s", m.next.Name())
+	m.output.Infof("Starting command: %s", m.next.Name())
 
 	err := m.next.Execute(ctx, args)
 
 	duration := time.Since(start)
 	if err != nil {
-		m.output.Errorf("Comando %s falhou após %v: %v", m.next.Name(), duration, err)
+		m.output.Errorf("Command %s failed after %v: %v", m.next.Name(), duration, err)
 	} else {
-		m.output.Infof("Comando %s concluído em %v", m.next.Name(), duration)
+		m.output.Infof("Command %s completed in %v", m.next.Name(), duration)
 	}
 
 	return err
 }
 
-// TimingMiddleware adiciona medição de tempo
+// TimingMiddleware adds time measurement
 type TimingMiddleware struct {
 	output cli.Output
 	next   cli.Command
 }
 
-// NewTimingMiddleware cria um middleware de timing
+// NewTimingMiddleware creates a timing middleware
 func NewTimingMiddleware(next cli.Command, output cli.Output) cli.Command {
 	return &TimingMiddleware{
 		output: output,

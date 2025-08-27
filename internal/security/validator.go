@@ -8,13 +8,13 @@ import (
 	"unicode"
 )
 
-// PathValidator valida caminhos contra path traversal
+// PathValidator validates paths against path traversal
 type PathValidator struct {
 	allowedExtensions map[string]bool
 	maxPathLength     int
 }
 
-// NewPathValidator cria um novo validador de paths
+// NewPathValidator creates a new path validator
 func NewPathValidator() *PathValidator {
 	return &PathValidator{
 		allowedExtensions: map[string]bool{
@@ -28,62 +28,62 @@ func NewPathValidator() *PathValidator {
 	}
 }
 
-// ValidatePath valida um caminho contra ataques de path traversal
+// ValidatePath validates a path against path traversal attacks
 func (pv *PathValidator) ValidatePath(path string) error {
 	if path == "" {
-		return fmt.Errorf("caminho vazio não é permitido")
+		return fmt.Errorf("empty path not allowed")
 	}
 
-	// Verifica comprimento máximo
+	// Check maximum length
 	if len(path) > pv.maxPathLength {
-		return fmt.Errorf("caminho muito longo: máximo %d caracteres", pv.maxPathLength)
+		return fmt.Errorf("path too long: maximum %d characters", pv.maxPathLength)
 	}
 
-	// Normaliza o caminho
+	// Normalize path
 	cleanPath := filepath.Clean(path)
 
-	// Verifica se há tentativas de path traversal
+	// Check for path traversal attempts
 	if strings.Contains(cleanPath, "..") {
-		return fmt.Errorf("path traversal detectado: %s", path)
+		return fmt.Errorf("path traversal detected: %s", path)
 	}
 
-	// Verifica caracteres perigosos
+	// Check dangerous characters
 	if containsDangerousChars(cleanPath) {
-		return fmt.Errorf("caracteres perigosos detectados no caminho: %s", path)
+		return fmt.Errorf("dangerous characters detected in path: %s", path)
 	}
 
-	// Verifica se é um caminho absoluto suspeito
+	// Check if it's a suspicious absolute path
 	if strings.HasPrefix(cleanPath, "/etc/") ||
 		strings.HasPrefix(cleanPath, "/proc/") ||
 		strings.HasPrefix(cleanPath, "/sys/") ||
 		strings.HasPrefix(cleanPath, "/dev/") {
-		return fmt.Errorf("acesso a diretório do sistema não permitido: %s", path)
+		return fmt.Errorf("access to system directory not allowed: %s", path)
 	}
 
 	return nil
 }
 
-// ValidateFileName valida um nome de arquivo
+// ValidateFileName validates a filename
 func (pv *PathValidator) ValidateFileName(filename string) error {
 	if filename == "" {
-		return fmt.Errorf("nome de arquivo vazio")
+		return fmt.Errorf("empty filename")
 	}
 
-	// Verifica extensão
+	// Check extension
 	ext := strings.ToLower(filepath.Ext(filename))
 	if ext != "" && !pv.allowedExtensions[ext] {
-		return fmt.Errorf("extensão de arquivo não permitida: %s", ext)
+		return fmt.Errorf("file extension not allowed: %s", ext)
 	}
 
-	// Verifica caracteres perigosos no nome
+	// Check dangerous characters in name
 	if containsDangerousChars(filename) {
-		return fmt.Errorf("caracteres perigosos no nome do arquivo: %s", filename)
+		return fmt.Errorf("dangerous characters in filename: %s", filename)
 	}
 
 	return nil
 }
 
-// containsDangerousChars verifica caracteres perigosos
+// containsDangerousChars checks for dangerous characters
 func containsDangerousChars(input string) bool {
 	dangerous := []string{
 		"<", ">", ":", "\"", "|", "?", "*",
@@ -96,7 +96,7 @@ func containsDangerousChars(input string) bool {
 		}
 	}
 
-	// Verifica caracteres de controle
+	// Check for control characters
 	for _, r := range input {
 		if unicode.IsControl(r) && r != '\t' && r != '\n' && r != '\r' {
 			return true
@@ -106,25 +106,25 @@ func containsDangerousChars(input string) bool {
 	return false
 }
 
-// InputSanitizer sanitiza inputs do usuário
+// InputSanitizer sanitizes user inputs
 type InputSanitizer struct {
 	maxLength int
 }
 
-// NewInputSanitizer cria um novo sanitizador
+// NewInputSanitizer creates a new sanitizer
 func NewInputSanitizer(maxLength int) *InputSanitizer {
 	return &InputSanitizer{
 		maxLength: maxLength,
 	}
 }
 
-// SanitizeString sanitiza uma string
+// SanitizeString sanitizes a string
 func (is *InputSanitizer) SanitizeString(input string) (string, error) {
 	if len(input) > is.maxLength {
-		return "", fmt.Errorf("string muito longa: máximo %d caracteres", is.maxLength)
+		return "", fmt.Errorf("string too long: maximum %d characters", is.maxLength)
 	}
 
-	// Remove caracteres de controle
+	// Remove control characters
 	cleaned := strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) && r != '\t' && r != '\n' && r != '\r' {
 			return -1
@@ -132,62 +132,62 @@ func (is *InputSanitizer) SanitizeString(input string) (string, error) {
 		return r
 	}, input)
 
-	// Trim espaços
+	// Trim spaces
 	cleaned = strings.TrimSpace(cleaned)
 
 	return cleaned, nil
 }
 
-// ValidateDomainName valida um nome de domínio
+// ValidateDomainName validates a domain name
 func ValidateDomainName(domain string) error {
 	if domain == "" {
-		return fmt.Errorf("domínio vazio")
+		return fmt.Errorf("empty domain")
 	}
 
 	if len(domain) > 253 {
-		return fmt.Errorf("domínio muito longo")
+		return fmt.Errorf("domain too long")
 	}
 
-	// Regex para validar domínio
+	// Regex to validate domain
 	domainRegex := regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?)*$`)
 	if !domainRegex.MatchString(domain) {
-		return fmt.Errorf("formato de domínio inválido: %s", domain)
+		return fmt.Errorf("invalid domain format: %s", domain)
 	}
 
 	return nil
 }
 
-// ValidateEmail valida um email
+// ValidateEmail validates an email
 func ValidateEmail(email string) error {
 	if email == "" {
-		return fmt.Errorf("email vazio")
+		return fmt.Errorf("empty email")
 	}
 
 	if len(email) > 254 {
-		return fmt.Errorf("email muito longo")
+		return fmt.Errorf("email too long")
 	}
 
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	if !emailRegex.MatchString(email) {
-		return fmt.Errorf("formato de email inválido: %s", email)
+		return fmt.Errorf("invalid email format: %s", email)
 	}
 
 	return nil
 }
 
-// ValidateResourceLimits valida limites de recursos
+// ValidateResourceLimits validates resource limits
 func ValidateResourceLimits(cpus, memory string) error {
 	if cpus != "" {
 		cpuRegex := regexp.MustCompile(`^[0-9]+(\.[0-9]+)?$`)
 		if !cpuRegex.MatchString(cpus) {
-			return fmt.Errorf("formato de CPU inválido: %s", cpus)
+			return fmt.Errorf("invalid CPU format: %s", cpus)
 		}
 	}
 
 	if memory != "" {
 		memoryRegex := regexp.MustCompile(`^[0-9]+[kmg]?$`)
 		if !memoryRegex.MatchString(strings.ToLower(memory)) {
-			return fmt.Errorf("formato de memória inválido: %s", memory)
+			return fmt.Errorf("invalid memory format: %s", memory)
 		}
 	}
 

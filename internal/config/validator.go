@@ -6,15 +6,15 @@ import (
 	"fmt"
 )
 
-// Validator valida configurações
+// Validator validates configurations
 type Validator interface {
 	Validate(ctx context.Context, stack *Stack) error
 }
 
-// validator implementa Validator
+// validator implements Validator
 type validator struct{}
 
-// NewValidator cria um novo validator
+// NewValidator creates a new validator
 func NewValidator() Validator {
 	return &validator{}
 }
@@ -24,34 +24,34 @@ func (v *validator) Validate(ctx context.Context, stack *Stack) error {
 
 	var errs []error
 
-	// Validações básicas
+	// Basic validations
 	if stack.Version != 1 {
-		errs = append(errs, errors.New("version deve ser 1"))
+		errs = append(errs, errors.New("version must be 1"))
 	}
 	if stack.Project == "" {
-		errs = append(errs, errors.New("project é obrigatório"))
+		errs = append(errs, errors.New("project is required"))
 	}
 	if stack.Domain == "" {
-		errs = append(errs, errors.New("domain é obrigatório"))
+		errs = append(errs, errors.New("domain is required"))
 	}
 
-	// Validação do TLS
+	// TLS validation
 	if err := v.validateTLS(&stack.TLS); err != nil {
 		errs = append(errs, err)
 	}
 
-	// Validação das networks
+	// Networks validation
 	if err := v.validateNetworks(stack.Networks); err != nil {
 		errs = append(errs, err)
 	}
 
-	// Validação dos services
+	// Services validation
 	if err := v.validateServices(stack.Services); err != nil {
 		errs = append(errs, err)
 	}
 
 	if len(errs) > 0 {
-		msg := "config inválida:\n"
+		msg := "invalid config:\n"
 		for _, e := range errs {
 			msg += " - " + e.Error() + "\n"
 		}
@@ -64,13 +64,13 @@ func (v *validator) Validate(ctx context.Context, stack *Stack) error {
 func (v *validator) validateTLS(tls *TLS) error {
 	switch tls.Mode {
 	case "acme", "selfsigned", "disabled":
-		// modos válidos
+		// valid modes
 	default:
-		return fmt.Errorf("tls.mode inválido: %q", tls.Mode)
+		return fmt.Errorf("invalid tls.mode: %q", tls.Mode)
 	}
 
 	if tls.Mode == "acme" && tls.Email == "" {
-		return errors.New("tls.email obrigatório com acme")
+		return errors.New("tls.email required with acme")
 	}
 
 	return nil
@@ -78,73 +78,73 @@ func (v *validator) validateTLS(tls *TLS) error {
 
 func (v *validator) validateNetworks(networks map[string]Network) error {
 	if _, ok := networks["public"]; !ok {
-		return errors.New("network 'public' é obrigatória")
+		return errors.New("network 'public' is required")
 	}
 	if _, ok := networks["private"]; !ok {
-		return errors.New("network 'private' é obrigatória")
+		return errors.New("network 'private' is required")
 	}
 	return nil
 }
 
 func (v *validator) validateServices(services []Service) error {
 	if len(services) == 0 {
-		return errors.New("defina ao menos um service")
+		return errors.New("define at least one service")
 	}
 
 	seen := make(map[string]struct{})
 	for _, sv := range services {
 		if sv.Name == "" {
-			return errors.New("service.name é obrigatório")
+			return errors.New("service.name is required")
 		}
 
 		if _, ok := seen[sv.Name]; ok {
-			return fmt.Errorf("service duplicado: %s", sv.Name)
+			return fmt.Errorf("duplicate service: %s", sv.Name)
 		}
 		seen[sv.Name] = struct{}{}
 
 		if sv.Image == "" && sv.Build == nil {
-			return fmt.Errorf("%s: defina image OU build", sv.Name)
+			return fmt.Errorf("%s: define image OR build", sv.Name)
 		}
 		if sv.Image != "" && sv.Build != nil {
-			return fmt.Errorf("%s: use image OU build (não ambos)", sv.Name)
+			return fmt.Errorf("%s: use image OR build (not both)", sv.Name)
 		}
 		if sv.Expose <= 0 {
-			return fmt.Errorf("%s: expose deve ser > 0", sv.Name)
+			return fmt.Errorf("%s: expose must be > 0", sv.Name)
 		}
 		if sv.Traefik && sv.Subdomain == "" {
-			return fmt.Errorf("%s: subdomain é obrigatório quando traefik=true", sv.Name)
+			return fmt.Errorf("%s: subdomain is required when traefik=true", sv.Name)
 		}
 
-		// Validar replicas
+		// Validate replicas
 		if sv.Replicas < 0 {
-			return fmt.Errorf("%s: replicas não pode ser negativo", sv.Name)
+			return fmt.Errorf("%s: replicas cannot be negative", sv.Name)
 		}
 
-		// Validar volumes
+		// Validate volumes
 		for _, m := range sv.Volumes {
 			if m.Source == "" || m.Target == "" {
-				return fmt.Errorf("%s: volume inválido (source/target)", sv.Name)
+				return fmt.Errorf("%s: invalid volume (source/target)", sv.Name)
 			}
 		}
 
-		// Validar secrets
+		// Validate secrets
 		for _, secret := range sv.Secrets {
 			if secret.Name == "" {
-				return fmt.Errorf("%s: secret.name é obrigatório", sv.Name)
+				return fmt.Errorf("%s: secret.name is required", sv.Name)
 			}
 			if !secret.External && secret.File == "" {
-				return fmt.Errorf("%s: secret '%s' precisa de 'file' ou 'external=true'", sv.Name, secret.Name)
+				return fmt.Errorf("%s: secret '%s' needs 'file' or 'external=true'", sv.Name, secret.Name)
 			}
 		}
 
-		// Validar basic auth
+		// Validate basic auth
 		if sv.BasicAuth != nil && sv.BasicAuth.Enabled {
 			if len(sv.BasicAuth.Users) == 0 && sv.BasicAuth.UsersFile == "" {
-				return fmt.Errorf("%s: basic_auth habilitado precisa de 'users' ou 'users_file'", sv.Name)
+				return fmt.Errorf("%s: basic_auth enabled needs 'users' or 'users_file'", sv.Name)
 			}
 		}
 
-		// Validar recursos
+		// Validate resources
 		if err := v.validateResources(sv.Name, sv.Resources); err != nil {
 			return err
 		}
@@ -158,17 +158,17 @@ func (v *validator) validateResources(serviceName string, resources *Resources) 
 		return nil
 	}
 
-	// Validar formato de memória
+	// Validate memory format
 	if resources.Memory != "" {
 		if err := v.validateMemoryFormat(resources.Memory); err != nil {
-			return fmt.Errorf("%s: memory inválida: %v", serviceName, err)
+			return fmt.Errorf("%s: invalid memory: %v", serviceName, err)
 		}
 	}
 
-	// Validar formato de CPU
+	// Validate CPU format
 	if resources.CPUs != "" {
 		if err := v.validateCPUFormat(resources.CPUs); err != nil {
-			return fmt.Errorf("%s: cpus inválido: %v", serviceName, err)
+			return fmt.Errorf("%s: invalid cpus: %v", serviceName, err)
 		}
 	}
 
@@ -176,23 +176,23 @@ func (v *validator) validateResources(serviceName string, resources *Resources) 
 }
 
 func (v *validator) validateMemoryFormat(memory string) error {
-	// Formatos válidos: 512m, 1g, 2048M, 1G, etc.
+	// Valid formats: 512m, 1g, 2048M, 1G, etc.
 	if len(memory) < 2 {
-		return errors.New("formato inválido")
+		return errors.New("invalid format")
 	}
 
 	unit := memory[len(memory)-1:]
 	if unit != "m" && unit != "M" && unit != "g" && unit != "G" {
-		return errors.New("unidade deve ser m, M, g ou G")
+		return errors.New("unit must be m, M, g or G")
 	}
 
 	return nil
 }
 
 func (v *validator) validateCPUFormat(cpu string) error {
-	// Formatos válidos: 0.5, 1, 1.0, 2, etc.
+	// Valid formats: 0.5, 1, 1.0, 2, etc.
 	if cpu == "" {
-		return errors.New("valor vazio")
+		return errors.New("empty value")
 	}
 
 	return nil

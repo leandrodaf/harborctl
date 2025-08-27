@@ -38,7 +38,7 @@ func (c *renderCommand) Name() string {
 }
 
 func (c *renderCommand) Description() string {
-	return "Gera o docker-compose.yml"
+	return "Generates docker-compose.yml"
 }
 
 func (c *renderCommand) Execute(ctx context.Context, args []string) error {
@@ -48,9 +48,9 @@ func (c *renderCommand) Execute(ctx context.Context, args []string) error {
 	var noDozzle, noBeszel bool
 
 	fs.StringVar(&stackPath, "f", "stack.yml", "stack.yml")
-	fs.StringVar(&outputPath, "o", ".deploy/compose.generated.yml", "compose de saída")
-	fs.BoolVar(&noDozzle, "no-dozzle", false, "não incluir dozzle")
-	fs.BoolVar(&noBeszel, "no-beszel", false, "não incluir beszel")
+	fs.StringVar(&outputPath, "o", ".deploy/compose.generated.yml", "output compose")
+	fs.BoolVar(&noDozzle, "no-dozzle", false, "don't include dozzle")
+	fs.BoolVar(&noBeszel, "no-beszel", false, "don't include beszel")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -82,11 +82,11 @@ func (c *renderCommand) Execute(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// Escrever arquivo
+	// Write file
 	if err := c.filesystem.WriteFile(outputPath, data, 0644); err != nil {
 		return err
 	}
 
-	c.output.Infof("compose gerado em %s", outputPath)
+	c.output.Infof("compose generated at %s", outputPath)
 	return nil
 }

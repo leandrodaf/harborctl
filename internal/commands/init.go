@@ -29,7 +29,7 @@ func (c *initCommand) Name() string {
 }
 
 func (c *initCommand) Description() string {
-	return "Cria um stack.yml inicial"
+	return "Creates an initial stack.yml"
 }
 
 func (c *initCommand) Execute(ctx context.Context, args []string) error {
@@ -38,19 +38,19 @@ func (c *initCommand) Execute(ctx context.Context, args []string) error {
 	var domain, email, project string
 	var noDozzle, noBeszel bool
 
-	fs.StringVar(&domain, "domain", "", "domínio base (ex.: exemplo.com)")
-	fs.StringVar(&email, "email", "", "email para ACME")
-	fs.StringVar(&project, "project", "app", "nome do projeto")
-	fs.BoolVar(&noDozzle, "no-dozzle", false, "não incluir dozzle")
-	fs.BoolVar(&noBeszel, "no-beszel", false, "não incluir beszel")
+	fs.StringVar(&domain, "domain", "", "base domain (ex: example.com)")
+	fs.StringVar(&email, "email", "", "email for ACME")
+	fs.StringVar(&project, "project", "app", "project name")
+	fs.BoolVar(&noDozzle, "no-dozzle", false, "don't include dozzle")
+	fs.BoolVar(&noBeszel, "no-beszel", false, "don't include beszel")
 
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
 	if domain == "" || email == "" {
-		c.output.Error("Uso: harborctl init --domain <dominio> --email <email>")
-		return fmt.Errorf("domain e email são obrigatórios")
+		c.output.Error("Usage: harborctl init --domain <domain> --email <email>")
+		return fmt.Errorf("domain and email are required")
 	}
 
 	options := config.CreateOptions{
@@ -62,13 +62,13 @@ func (c *initCommand) Execute(ctx context.Context, args []string) error {
 	}
 
 	if err := c.configManager.Create(ctx, "stack.yml", options); err != nil {
-		if err.Error() == "stack.yml já existe" {
-			c.output.Error("stack.yml já existe; não vou sobrescrever")
+		if err.Error() == "stack.yml already exists" {
+			c.output.Error("stack.yml already exists; won't overwrite")
 			os.Exit(1)
 		}
-		return fmt.Errorf("erro ao criar stack.yml: %w", err)
+		return fmt.Errorf("error creating stack.yml: %w", err)
 	}
 
-	c.output.Info("stack.yml criado. Edite e adicione seus serviços em `services:`.")
+	c.output.Info("stack.yml created. Edit and add your services in `services:`.")
 	return nil
 }

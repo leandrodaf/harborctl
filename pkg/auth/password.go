@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// HashPassword gera um hash bcrypt para uma senha
+// HashPassword generates a bcrypt hash for a password
 func HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -16,7 +16,7 @@ func HashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-// GenerateRandomPassword gera uma senha aleatória
+// GenerateRandomPassword generates a random password
 func GenerateRandomPassword(length int) (string, error) {
 	if length < 4 {
 		length = 12
