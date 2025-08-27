@@ -29,7 +29,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           check-latest: true
-          # cache é habilitado por padrão; ajudamos com múltiplos caminhos
+          # cache is enabled by default; we help with multiple paths
           cache-dependency-path: |
             go.sum
             **/go.sum
@@ -38,7 +38,7 @@ jobs:
       - name: Go vet
         run: go vet ./...
 
-      # Cobertura moderna via GOCOVERDIR (agrega multi-pacote)
+      # Modern coverage via GOCOVERDIR (aggregates multi-package)
       - name: Run tests (race + coverage dir)
         run: |
           set -euo pipefail
@@ -46,14 +46,14 @@ jobs:
           mkdir -p cover
           export GOCOVERDIR="$PWD/cover"
           go test -race ./...
-          # Gera coverage.out consolidado se houver dados
+          # Generate consolidated coverage.out if there's data
           if [ -d "$GOCOVERDIR" ] && [ -n "$(ls -A "$GOCOVERDIR" 2>/dev/null || true)" ]; then
             go tool covdata textfmt -i="$GOCOVERDIR" -o coverage.out
           else
             echo "no coverage data" > coverage.out
           fi
 
-      - name: Govulncheck (oficial)
+      - name: Govulncheck (official)
         uses: golang/govulncheck-action@v1
         continue-on-error: true
 
@@ -158,18 +158,18 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          # Move arquivos compactados para o diretório raiz
+          # Move compressed files to root directory
           find . -type f -name "*.tar.gz" -exec mv -f {} . \; || true
           find . -type f -name "*.zip"    -exec mv -f {} . \; || true
           
-          # Copia binários diretos e renomeia para facilitar download
+          # Copy direct binaries and rename for easy download
           find . -name "${{ env.BINARY_NAME }}" -type f -exec cp {} ${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64 \; || true
           find . -name "${{ env.BINARY_NAME }}" -type f -path "*arm64*" -exec cp {} ${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64 \; || true
           
-          # Remove diretórios temporários
+          # Remove temporary directories
           find . -mindepth 1 -type d -exec rm -rf {} + || true
           
-          # Gera checksums para todos os arquivos
+          # Generate checksums for all files
           shopt -s nullglob
           files=( *.tar.gz *.zip ${{ env.BINARY_NAME }}_* )
           if (( ${#files[@]} )); then
@@ -194,126 +194,126 @@ jobs:
           body: |
             ## Harbor CLI ${{ github.ref_name }}
 
-            **HarborCtl** é uma ferramenta de linha de comando para gerenciar e implantar serviços usando Docker Compose com funcionalidades avançadas.
+            **HarborCtl** is a command-line tool for managing and deploying services using Docker Compose with advanced features.
 
-            ### 📥 Instalação
+            ### 📥 Installation
 
-            #### Instalação Super Rápida (Binário Direto)
+            #### Super Quick Installation (Direct Binary)
 
-            **Para amd64 (Intel/AMD):**
+            **For amd64 (Intel/AMD):**
             ```bash
             sudo curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64 -o /usr/local/bin/${{ env.BINARY_NAME }} && sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
             ```
 
-            **Para arm64 (ARM64):**
+            **For arm64 (ARM64):**
             ```bash
             sudo curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64 -o /usr/local/bin/${{ env.BINARY_NAME }} && sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
             ```
 
-            #### Instalação Automática (Arquivo Compactado)
+            #### Automatic Installation (Compressed Archive)
 
-            **Para amd64 (Intel/AMD):**
+            **For amd64 (Intel/AMD):**
             ```bash
             curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64.tar.gz | sudo tar -xzC /usr/local/bin ${{ env.BINARY_NAME }}
             ```
 
-            **Para arm64 (ARM64/Apple Silicon em servidores Linux):**
+            **For arm64 (ARM64/Apple Silicon on Linux servers):**
             ```bash
             curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64.tar.gz | sudo tar -xzC /usr/local/bin ${{ env.BINARY_NAME }}
             ```
 
-            #### Instalação Manual
+            #### Manual Installation
 
-            1. **Baixe o arquivo para sua arquitetura:**
+            1. **Download the file for your architecture:**
                ```bash
-               # Para amd64
+               # For amd64
                wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64.tar.gz
                
-               # Para arm64
+               # For arm64
                wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64.tar.gz
                ```
 
-            2. **Extraia e instale:**
+            2. **Extract and install:**
                ```bash
-               # Substitua ARQUIVO.tar.gz pelo arquivo baixado
-               tar -xzf ARQUIVO.tar.gz
+               # Replace FILENAME.tar.gz with the downloaded file
+               tar -xzf FILENAME.tar.gz
                sudo mv ${{ env.BINARY_NAME }} /usr/local/bin/
                sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
                ```
 
-            #### Detectar Arquitetura Automaticamente
+            #### Auto-detect Architecture
 
-            Se não souber sua arquitetura, use este comando que detecta automaticamente:
+            If you don't know your architecture, use this command that automatically detects it:
             ```bash
             ARCH=$(uname -m)
             case $ARCH in
                 x86_64) ARCH="amd64" ;;
                 aarch64|arm64) ARCH="arm64" ;;
-                *) echo "Arquitetura não suportada: $ARCH" && exit 1 ;;
+                *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
             esac
             
             curl -sSLf "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_${ARCH}.tar.gz" | sudo tar -xzC /usr/local/bin ${{ env.BINARY_NAME }}
             ```
 
-            #### Para Scripts e Automação
+            #### For Scripts and Automation
 
-            **Download direto do binário (sem descompactação):**
+            **Direct binary download (no decompression needed):**
             ```bash
-            # Auto-detecta arquitetura e baixa o binário direto
+            # Auto-detect architecture and download direct binary
             ARCH=$(uname -m)
             case $ARCH in
                 x86_64) ARCH="amd64" ;;
                 aarch64|arm64) ARCH="arm64" ;;
-                *) echo "Arquitetura não suportada: $ARCH" && exit 1 ;;
+                *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
             esac
             
-            # Download para uso local (não instala no sistema)
+            # Download for local use (doesn't install system-wide)
             curl -sSLf "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_${ARCH}" -o ${{ env.BINARY_NAME }}
             chmod +x ${{ env.BINARY_NAME }}
             ./${{ env.BINARY_NAME }} --version
             ```
 
-            **Para CI/CD e containers:**
+            **For CI/CD and containers:**
             ```bash
-            # Em Dockerfile ou scripts CI/CD
+            # In Dockerfile or CI/CD scripts
             RUN curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64 -o /usr/local/bin/${{ env.BINARY_NAME }} && chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
             ```
 
-            ### ✅ Verificar Instalação
+            ### ✅ Verify Installation
 
-            Após a instalação, verifique se funcionou:
+            After installation, verify it worked:
             ```bash
             ${{ env.BINARY_NAME }} --version
             ${{ env.BINARY_NAME }} --help
             ```
 
-            ### 🔒 Verificação de Integridade (Opcional)
+            ### 🔒 Integrity Verification (Optional)
 
-            Para verificar a integridade dos arquivos baixados:
+            To verify the integrity of downloaded files:
             ```bash
-            # Baixe o arquivo de checksums
+            # Download the checksums file
             wget https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/checksums.txt
             
-            # Verifique o arquivo baixado
+            # Verify the downloaded file
             sha256sum -c checksums.txt --ignore-missing
             ```
 
-            ### 🗑️ Desinstalação
+            ### 🗑️ Uninstallation
 
-            Para remover o HarborCtl:
+            To remove HarborCtl:
             ```bash
             sudo rm /usr/local/bin/${{ env.BINARY_NAME }}
             ```
 
-            ### 📋 Requisitos do Sistema
+            ### 📋 System Requirements
 
-            - **SO:** Linux (qualquer distribuição)
-            - **Arquitetura:** amd64 (x86_64) ou arm64 (aarch64)
-            - **Permissões:** sudo/root para instalação em `/usr/local/bin`
+            - **OS:** Linux (any distribution)
+            - **Architecture:** amd64 (x86_64) or arm64 (aarch64)
+            - **Permissions:** sudo/root for installation in `/usr/local/bin`
 
-            ### 🚀 Primeiros Passos
+            ### 🚀 Getting Started
 
-            Após a instalação, consulte a documentação para começar:
+            After installation, check the documentation to get started:
             ```bash
             ${{ env.BINARY_NAME }} docs
             ```
