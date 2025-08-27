@@ -155,7 +155,7 @@ cp templates/github-actions/deploy.yml .github/workflows/
 ## 🏗️ Desenvolvimento
 
 ### Requisitos
-- Go 1.21+
+- Go 1.24+
 - Docker
 - Docker Compose
 

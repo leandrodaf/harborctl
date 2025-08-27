@@ -55,7 +55,12 @@ func (c *Client) Pull(ctx context.Context, path, branch string) error {
 	if err != nil {
 		return err
 	}
-	defer os.Chdir(oldDir)
+	defer func() {
+		if err := os.Chdir(oldDir); err != nil {
+			// Log the error but don't fail the operation
+			fmt.Printf("Warning: failed to restore directory: %v\n", err)
+		}
+	}()
 
 	if err := os.Chdir(path); err != nil {
 		return fmt.Errorf("erro ao acessar diretório: %w", err)
