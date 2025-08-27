@@ -87,30 +87,6 @@ jobs:
             goarch: arm64
             ext: ""
             archive_ext: tar.gz
-          - os: darwin  # macOS Intel
-            arch: amd64
-            goos: darwin
-            goarch: amd64
-            ext: ""
-            archive_ext: tar.gz
-          - os: darwin  # macOS Apple Silicon
-            arch: arm64
-            goos: darwin
-            goarch: arm64
-            ext: ""
-            archive_ext: tar.gz
-          - os: windows # Windows amd64
-            arch: amd64
-            goos: windows
-            goarch: amd64
-            ext: .exe
-            archive_ext: zip
-          - os: windows # Windows arm64
-            arch: arm64
-            goos: windows
-            goarch: arm64
-            ext: .exe
-            archive_ext: zip
 
     steps:
       - name: Checkout
@@ -216,27 +192,6 @@ jobs:
             tar -xzf ${OS}-${ARCH}.tgz ${BINARY_NAME}
             sudo install -m 0755 ${BINARY_NAME} /usr/local/bin/${BINARY_NAME}
             ${BINARY_NAME} --version
-            ```
-
-            **macOS (amd64/arm64):**
-            ```bash
-            OS=darwin
-            ARCH=$(uname -m); [[ "$ARCH" == "x86_64" ]] && ARCH=amd64
-            curl -sSLf https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.BINARY_NAME }}_${{ github.ref_name }}_${OS}_${ARCH}.tar.gz -o ${OS}-${ARCH}.tgz
-            tar -xzf ${OS}-${ARCH}.tgz ${BINARY_NAME}
-            sudo install -m 0755 ${BINARY_NAME} /usr/local/bin/${BINARY_NAME}
-            ${BINARY_NAME} --version
-            ```
-
-            **Windows (amd64/arm64) – PowerShell:**
-            ```powershell
-            $OS = "windows"
-            $archCode = (Get-CimInstance Win32_Processor).Architecture
-            $ARCH = ($archCode -eq 12) ? "arm64" : "amd64"
-            $Name = "${{ env.BINARY_NAME }}_${{ github.ref_name }}_${OS}_$ARCH.zip"
-            Invoke-WebRequest "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/$Name" -OutFile $Name
-            Expand-Archive $Name -DestinationPath .
-            .\${{ env.BINARY_NAME }}.exe --version
             ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
