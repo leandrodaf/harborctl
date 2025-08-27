@@ -1,5 +1,5 @@
 # Binários
-harborctl
+/harborctl
 *.exe
 *.dll
 *.so
