@@ -1,0 +1,87 @@
+# Configuração de Repositórios para Deploy Multi-Microserviços
+version: 1
+
+# Configurações globais aplicadas a todos os microserviços
+global_config:
+  domain: "example.com"
+  tls:
+    mode: acme
+    email: "admin@example.com"
+    resolver: le
+  observability:
+    dozzle:
+      enabled: true
+      subdomain: logs
+    beszel:
+      enabled: true
+      subdomain: monitor
+  networks:
+    private:
+      internal: true
+    public:
+      internal: false
+
+# Lista de repositórios de microserviços
+repositories:
+  - name: "auth-service"
+    url: "https://github.com/company/auth-service.git"
+    branch: "main"
+    path: "deploy"  # Caminho onde está o stack.yml dentro do repo
+    enabled: true
+    token_env: "GITHUB_TOKEN"  # Nome da variável de ambiente com o token
+    depends_on: []  # Sem dependências - deploy primeiro
+
+  - name: "user-service"
+    url: "https://github.com/company/user-service.git"
+    branch: "main"
+    path: "."
+    enabled: true
+    token_env: "GITHUB_TOKEN"
+    depends_on: ["auth-service"]  # Depende do auth-service
+
+  - name: "order-service"
+    url: "https://github.com/company/order-service.git"
+    branch: "main"
+    path: "infrastructure"
+    enabled: true
+    token_env: "GITHUB_TOKEN"
+    depends_on: ["auth-service", "user-service"]
+
+  - name: "payment-service"
+    url: "https://github.com/company/payment-service.git"
+    branch: "main"
+    path: "deploy"
+    enabled: true
+    token_env: "GITHUB_TOKEN"
+    depends_on: ["auth-service"]
+
+  - name: "frontend-app"
+    url: "https://github.com/company/frontend-app.git"
+    branch: "main"
+    path: "deploy"
+    enabled: true
+    token_env: "GITHUB_TOKEN"
+    depends_on: ["auth-service", "user-service", "order-service", "payment-service"]
+
+  - name: "analytics-service"
+    url: "https://github.com/company/analytics-service.git"
+    branch: "main"
+    path: "."
+    enabled: false  # Desabilitado para este deploy
+    token_env: "GITHUB_TOKEN"
+    depends_on: []
+
+# Configurações de segurança para o deploy
+security:
+  allowed_domains:
+    - "github.com"
+    - "gitlab.com"
+  max_repo_size: "500MB"
+  clone_timeout: "5m"
+  deploy_timeout: "10m"
+
+# Configurações de monitoramento
+monitoring:
+  health_check_interval: "30s"
+  deployment_timeout: "300s"
+  rollback_on_failure: true

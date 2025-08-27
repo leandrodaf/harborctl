@@ -1,0 +1,66 @@
+# Binários
+harborctl
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Arquivos de teste
+*.test
+*.out
+coverage.txt
+
+# Go vendor
+vendor/
+
+# Arquivos temporários
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS específicos
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Arquivos gerados
+.deploy/
+*.generated.yml
+compose.generated.yml
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Stack específicos do projeto
+stack.yml
+!examples/
+
+# Dados do Docker
+traefik_acme/
+*_data/
+
+# Certificados e chaves
+*.pem
+*.key
+*.crt
+acme.json
+
+# Build artifacts
+dist/
+build/

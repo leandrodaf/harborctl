@@ -1,0 +1,217 @@
+# 🚀 GitHub Actions Template para Deploy de Microserviços
+
+# Este template é usado para criar pipelines de CI/CD em repositórios de microserviços.
+# 
+# ## 📋 Uso
+# 
+# Copie este arquivo para `.github/workflows/deploy.yml` no seu repositório de microserviço.
+
+name: 🚀 Deploy {{SERVICE_NAME}}
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Ambiente de deploy'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+        default: 'production'
+      replicas:
+        description: 'Número de réplicas'
+        required: false
+        default: '2'
+        type: number
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  HARBOR_VERSION: 'latest'  # ou versão específica
+
+jobs:
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    # Adapte os testes para sua linguagem/framework
+    - name: 📦 Install dependencies
+      run: |
+        # Para Node.js
+        npm ci
+        # Para Go: go mod download
+        # Para Python: pip install -r requirements.txt
+    
+    - name: 🧪 Run tests
+      run: |
+        # Para Node.js
+        npm test
+        # Para Go: go test ./...
+        # Para Python: python -m pytest
+    
+    - name: 🏗️ Build
+      run: |
+        # Para Node.js
+        npm run build
+        # Para Go: go build -o app ./cmd/main.go
+
+  build:
+    name: 🏗️ Build and Push Image
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+    
+    - name: 🔐 Login to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 📦 Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: 🏗️ Build and push
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+    
+    - name: 📝 Output image
+      id: image
+      run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}" >> $GITHUB_OUTPUT
+
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    needs: build
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+    - name: 📥 Install Harbor CLI
+      run: |
+        curl -sSL https://github.com/SEU-USUARIO/harbor-cli/releases/latest/download/harborctl-linux-amd64 -o harborctl
+        chmod +x harborctl
+        sudo mv harborctl /usr/local/bin/
+    
+    - name: 🚀 Deploy to staging
+      env:
+        DEPLOY_HOST: ${{ secrets.STAGING_HOST }}
+        DEPLOY_USER: ${{ secrets.STAGING_USER }}
+        DEPLOY_KEY: ${{ secrets.STAGING_SSH_KEY }}
+        IMAGE: ${{ needs.build.outputs.image }}
+      run: |
+        echo "$DEPLOY_KEY" > deploy_key
+        chmod 600 deploy_key
+        
+        harborctl deploy-service \
+          --host "$DEPLOY_HOST" \
+          --user "$DEPLOY_USER" \
+          --key deploy_key \
+          --service "${{ github.event.repository.name }}" \
+          --image "$IMAGE" \
+          --environment staging
+
+  deploy-production:
+    name: 🚀 Deploy to Production
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - name: � Install Harbor CLI
+      run: |
+        curl -sSL https://github.com/SEU-USUARIO/harbor-cli/releases/latest/download/harborctl-linux-amd64 -o harborctl
+        chmod +x harborctl
+        sudo mv harborctl /usr/local/bin/
+    
+    - name: 🚀 Deploy to production
+      env:
+        DEPLOY_HOST: ${{ secrets.PRODUCTION_HOST }}
+        DEPLOY_USER: ${{ secrets.PRODUCTION_USER }}
+        DEPLOY_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+        IMAGE: ${{ needs.build.outputs.image }}
+        REPLICAS: ${{ github.event.inputs.replicas || '2' }}
+      run: |
+        echo "$DEPLOY_KEY" > deploy_key
+        chmod 600 deploy_key
+        
+        harborctl deploy-service \
+          --host "$DEPLOY_HOST" \
+          --user "$DEPLOY_USER" \
+          --key deploy_key \
+          --service "${{ github.event.repository.name }}" \
+          --image "$IMAGE" \
+          --environment production \
+          --replicas "$REPLICAS"
+
+  auto-scale:
+    name: 📊 Auto Scale Check
+    needs: [deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📊 Check and scale if needed
+      env:
+        MONITOR_HOST: ${{ github.ref == 'refs/heads/main' && secrets.PRODUCTION_HOST || secrets.STAGING_HOST }}
+        MONITOR_USER: ${{ github.ref == 'refs/heads/main' && secrets.PRODUCTION_USER || secrets.STAGING_USER }}
+        MONITOR_KEY: ${{ github.ref == 'refs/heads/main' && secrets.PRODUCTION_SSH_KEY || secrets.STAGING_SSH_KEY }}
+      run: |
+        curl -sSL https://github.com/SEU-USUARIO/harbor-cli/releases/latest/download/harborctl-linux-amd64 -o harborctl
+        chmod +x harborctl
+        
+        echo "$MONITOR_KEY" > monitor_key
+        chmod 600 monitor_key
+        
+        harborctl scale \
+          --host "$MONITOR_HOST" \
+          --user "$MONITOR_USER" \
+          --key monitor_key \
+          --service "${{ github.event.repository.name }}" \
+          --check-metrics \
+          --auto-scale
