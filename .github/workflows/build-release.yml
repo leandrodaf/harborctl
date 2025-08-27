@@ -158,16 +158,32 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
+          
+          echo "=== Initial directory structure ==="
+          find . -type f -name "*" | head -20
+          
           # Move compressed files to root directory
           find . -type f -name "*.tar.gz" -exec mv -f {} . \; || true
           find . -type f -name "*.zip"    -exec mv -f {} . \; || true
           
-          # Copy direct binaries and rename for easy download
-          find . -name "${{ env.BINARY_NAME }}" -type f -exec cp {} ${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64 \; || true
-          find . -name "${{ env.BINARY_NAME }}" -type f -path "*arm64*" -exec cp {} ${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64 \; || true
+          # Copy direct binaries more explicitly
+          echo "=== Looking for binaries ==="
+          find . -name "${{ env.BINARY_NAME }}" -type f | while read -r binary; do
+            echo "Found binary: $binary"
+            if [[ "$binary" == *"amd64"* ]]; then
+              echo "Copying amd64 binary"
+              cp "$binary" "${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64"
+            elif [[ "$binary" == *"arm64"* ]]; then
+              echo "Copying arm64 binary"
+              cp "$binary" "${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64"
+            fi
+          done
           
           # Remove temporary directories
           find . -mindepth 1 -type d -exec rm -rf {} + || true
+          
+          echo "=== Final files ==="
+          ls -lah
           
           # Generate checksums for all files
           shopt -s nullglob
@@ -177,7 +193,9 @@ jobs:
           else
             echo "no assets" > checksums.txt
           fi
-          ls -lah
+          
+          echo "=== Checksums ==="
+          cat checksums.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
