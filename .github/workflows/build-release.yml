@@ -346,96 +346,23 @@ jobs:
             sha256sum -c checksums.txt --ignore-missing
             ```
 
-            ### � Update/Upgrade
+            ### 🔄 Update/Upgrade
 
-            #### Update to Latest Version
-            To update to the latest version, simply run the installation command again:
+            Para atualizar para a versão mais recente, simplesmente execute novamente o comando de instalação:
+
+            **Para amd64 (Intel/AMD):**
             ```bash
-            # Auto-detect and update
-            ARCH=$(uname -m)
-            case $ARCH in
-                x86_64) ARCH="amd64" ;;
-                aarch64|arm64) ARCH="arm64" ;;
-                *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
-            esac
-            
-            sudo curl -sSLf "https://github.com/${{ github.repository }}/releases/latest/download/${{ env.BINARY_NAME }}_latest_linux_${ARCH}" -o /usr/local/bin/${{ env.BINARY_NAME }} && sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
+            sudo curl -sSLf https://github.com/${{ github.repository }}/releases/latest/download/${{ env.BINARY_NAME }}_latest_linux_amd64 -o /usr/local/bin/${{ env.BINARY_NAME }} && sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
             ```
 
-            #### Force Update (Overwrite)
-            If you need to force an update or reinstall:
+            **Para arm64 (ARM64):**
             ```bash
-            # Remove current version first
-            sudo rm -f /usr/local/bin/${{ env.BINARY_NAME }}
-            
-            # Install latest version
-            ARCH=$(uname -m)
-            case $ARCH in
-                x86_64) ARCH="amd64" ;;
-                aarch64|arm64) ARCH="arm64" ;;
-                *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
-            esac
-            
-            sudo curl -sSLf "https://github.com/${{ github.repository }}/releases/latest/download/${{ env.BINARY_NAME }}_latest_linux_${ARCH}" -o /usr/local/bin/${{ env.BINARY_NAME }} && sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
+            sudo curl -sSLf https://github.com/${{ github.repository }}/releases/latest/download/${{ env.BINARY_NAME }}_latest_linux_arm64 -o /usr/local/bin/${{ env.BINARY_NAME }} && sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
             ```
 
-            #### Update Script (One-liner)
-            Create an update script for easy updates:
+            **Auto-detectar arquitetura:**
             ```bash
-            # Create update script
-            cat > update-harborctl.sh << 'EOF'
-            #!/bin/bash
-            set -euo pipefail
-
-            echo "🔄 Updating HarborCtl..."
-
-            # Check current version
-            if command -v ${{ env.BINARY_NAME }} >/dev/null 2>&1; then
-                echo "📋 Current version: $(${{ env.BINARY_NAME }} --version 2>/dev/null || echo 'unknown')"
-            else
-                echo "📋 HarborCtl not found, installing..."
-            fi
-
-            # Detect architecture
-            ARCH=$(uname -m)
-            case $ARCH in
-                x86_64) ARCH="amd64" ;;
-                aarch64|arm64) ARCH="arm64" ;;
-                *) echo "❌ Unsupported architecture: $ARCH" && exit 1 ;;
-            esac
-
-            echo "🏗️  Architecture detected: $ARCH"
-
-            # Download and install
-            echo "⬇️  Downloading latest version..."
-            sudo curl -sSLf "https://github.com/${{ github.repository }}/releases/latest/download/${{ env.BINARY_NAME }}_latest_linux_${ARCH}" -o /usr/local/bin/${{ env.BINARY_NAME }}
-            sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
-
-            echo "✅ Update completed!"
-            echo "📋 New version: $(${{ env.BINARY_NAME }} --version)"
-            EOF
-
-            chmod +x update-harborctl.sh
-            ./update-harborctl.sh
-            ```
-
-            #### Check for Updates
-            To check if there's a new version available:
-            ```bash
-            # Get current version
-            CURRENT_VERSION=$(${{ env.BINARY_NAME }} --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-
-            # Get latest version from GitHub
-            LATEST_VERSION=$(curl -sSLf https://api.github.com/repos/${{ github.repository }}/releases/latest | grep -oE '"tag_name": "v[0-9]+\.[0-9]+\.[0-9]+"' | cut -d'"' -f4)
-
-            echo "Current version: $CURRENT_VERSION"
-            echo "Latest version:  $LATEST_VERSION"
-
-            if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
-                echo "🔄 Update available!"
-            else
-                echo "✅ You have the latest version"
-            fi
+            curl -sSLf https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-harborctl.sh | bash
             ```
 
             ### �🗑️ Uninstallation

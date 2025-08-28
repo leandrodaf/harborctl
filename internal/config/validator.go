@@ -88,7 +88,7 @@ func (v *validator) validateNetworks(networks map[string]Network) error {
 
 func (v *validator) validateServices(services []Service) error {
 	if len(services) == 0 {
-		return errors.New("define at least one service")
+		return nil
 	}
 
 	seen := make(map[string]struct{})
