@@ -211,31 +211,9 @@ func (c *initCommand) runInteractiveSetup(ctx context.Context) error {
 		return fmt.Errorf("failed to get Beszel preference: %w", err)
 	}
 
-	var beszelAuth bool
-	var beszelUsername, beszelPassword string
+	// Beszel usa sistema de autenticação próprio - não configurar basic auth
 	if includeBeszel {
-		c.output.Info("💡 Beszel has built-in authentication system")
-		beszelAuth, err = c.prompter.Confirm("Add additional Traefik basic auth? (not recommended)", false)
-		if err != nil {
-			return fmt.Errorf("failed to get Beszel auth preference: %w", err)
-		}
-
-		if beszelAuth {
-			beszelUsername, err = c.prompter.Text("Beszel username", "admin")
-			if err != nil {
-				return fmt.Errorf("failed to get Beszel username: %w", err)
-			}
-
-			beszelPasswordRaw, err := c.prompter.PasswordWithValidation("Beszel password", prompt.ValidatePassword)
-			if err != nil {
-				return fmt.Errorf("failed to get Beszel password: %w", err)
-			}
-
-			beszelPassword, err = c.hashPassword(beszelPasswordRaw)
-			if err != nil {
-				return fmt.Errorf("failed to hash Beszel password: %w", err)
-			}
-		}
+		c.output.Info("💡 Beszel uses its own built-in authentication system")
 	}
 
 	// Generate Beszel keys automatically if Beszel is enabled
@@ -269,17 +247,17 @@ func (c *initCommand) runInteractiveSetup(ctx context.Context) error {
 		NoDozzle:       !includeDozzle,
 		NoBeszel:       !includeBeszel,
 		DozzleAuth:     dozzleAuth,
-		BeszelAuth:     beszelAuth,
+		BeszelAuth:     false, // Sempre false - Beszel usa auth próprio
 		DozzleUsername: dozzleUsername,
 		DozzlePassword: dozzlePassword,
-		BeszelUsername: beszelUsername,
-		BeszelPassword: beszelPassword,
+		BeszelUsername: "", // Não usado
+		BeszelPassword: "", // Não usado
 		BeszelHubKey:   beszelHubKey,
 		BeszelToken:    beszelToken,
 	}
 
 	// Show summary
-	c.showConfigSummary(project, domain, email, env, includeDozzle, includeBeszel, dozzleAuth, beszelAuth)
+	c.showConfigSummary(project, domain, email, env, includeDozzle, includeBeszel, dozzleAuth, false)
 
 	confirm, err := c.prompter.Confirm("Create project with these settings?", true)
 	if err != nil {
@@ -340,14 +318,17 @@ func (c *initCommand) runDirectSetup(ctx context.Context, domain, email, project
 	}
 
 	options := config.CreateOptions{
-		Domain:       domain,
-		Email:        email,
-		Project:      project,
-		Environment:  env,
-		NoDozzle:     noDozzle,
-		NoBeszel:     noBeszel,
-		BeszelHubKey: beszelHubKey,
-		BeszelToken:  beszelToken,
+		Domain:         domain,
+		Email:          email,
+		Project:        project,
+		Environment:    env,
+		NoDozzle:       noDozzle,
+		NoBeszel:       noBeszel,
+		BeszelAuth:     false, // Sempre false - Beszel usa auth próprio
+		BeszelUsername: "",    // Não usado
+		BeszelPassword: "",    // Não usado
+		BeszelHubKey:   beszelHubKey,
+		BeszelToken:    beszelToken,
 	}
 
 	return c.createProject(ctx, options)
@@ -428,11 +409,7 @@ func (c *initCommand) showConfigSummary(project, domain, email, env string, incl
 		c.output.Info("     • Dozzle (log viewer): ❌ Disabled")
 	}
 	if includeBeszel {
-		if beszelAuth {
-			c.output.Info("     • Beszel (monitoring): ✅ Enabled with authentication + keys auto-generated")
-		} else {
-			c.output.Info("     • Beszel (monitoring): ✅ Enabled (no web auth) + keys auto-generated")
-		}
+		c.output.Info("     • Beszel (monitoring): ✅ Enabled with built-in auth + keys auto-generated")
 	} else {
 		c.output.Info("     • Beszel (monitoring): ❌ Disabled")
 	}
