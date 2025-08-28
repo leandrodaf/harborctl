@@ -113,6 +113,21 @@ func registerCommands(
 	// Register down command
 	runner.Register(commands.NewDownCommand(dockerService, output))
 
+	// Register stop command
+	runner.Register(commands.NewStopCommand(dockerService, output))
+
+	// Register start command
+	runner.Register(commands.NewStartCommand(dockerService, output))
+
+	// Register restart command
+	runner.Register(commands.NewRestartCommand(dockerService, output))
+
+	// Register pause command
+	runner.Register(commands.NewPauseCommand(dockerService, output))
+
+	// Register unpause command
+	runner.Register(commands.NewUnpauseCommand(dockerService, output))
+
 	// Register status command
 	runner.Register(commands.NewStatusCommand(dockerService, output))
 
@@ -145,8 +160,17 @@ func showHelp(output cli.Output) {
 	output.Info("  init              Initialize new project configuration")
 	output.Info("  init-server       Initialize server with required dependencies")
 	output.Info("  deploy-service    Deploy a service to the stack")
+	output.Info("")
+	output.Info("LIFECYCLE:")
 	output.Info("  up                Start all services in the stack")
-	output.Info("  down              Stop all services in the stack")
+	output.Info("  down              Stop and remove all services")
+	output.Info("  stop              Stop services without removing containers")
+	output.Info("  start             Start previously stopped services")
+	output.Info("  restart           Restart all services")
+	output.Info("  pause             Pause all services")
+	output.Info("  unpause           Unpause all services")
+	output.Info("")
+	output.Info("MANAGEMENT:")
 	output.Info("  status            Show status of all services")
 	output.Info("  scale             Scale services up or down")
 	output.Info("  validate          Validate stack configuration")

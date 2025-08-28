@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 )
@@ -24,6 +25,34 @@ func (e *executor) ComposeUp(ctx context.Context, file string, build bool) error
 
 func (e *executor) ComposeDown(ctx context.Context, file string) error {
 	return e.run(ctx, "docker", "compose", "-f", file, "down")
+}
+
+func (e *executor) ComposeStop(ctx context.Context, file string, timeout int) error {
+	args := []string{"compose", "-f", file, "stop"}
+	if timeout > 0 {
+		args = append(args, "-t", fmt.Sprintf("%d", timeout))
+	}
+	return e.run(ctx, "docker", args...)
+}
+
+func (e *executor) ComposeStart(ctx context.Context, file string) error {
+	return e.run(ctx, "docker", "compose", "-f", file, "start")
+}
+
+func (e *executor) ComposeRestart(ctx context.Context, file string, timeout int) error {
+	args := []string{"compose", "-f", file, "restart"}
+	if timeout > 0 {
+		args = append(args, "-t", fmt.Sprintf("%d", timeout))
+	}
+	return e.run(ctx, "docker", args...)
+}
+
+func (e *executor) ComposePause(ctx context.Context, file string) error {
+	return e.run(ctx, "docker", "compose", "-f", file, "pause")
+}
+
+func (e *executor) ComposeUnpause(ctx context.Context, file string) error {
+	return e.run(ctx, "docker", "compose", "-f", file, "unpause")
 }
 
 func (e *executor) ImagePrune(ctx context.Context, filters ...string) error {
@@ -83,6 +112,26 @@ func (s *service) Deploy(ctx context.Context, composePath string, options Deploy
 
 func (s *service) Teardown(ctx context.Context, composePath string) error {
 	return s.executor.ComposeDown(ctx, composePath)
+}
+
+func (s *service) Stop(ctx context.Context, composePath string, timeout int) error {
+	return s.executor.ComposeStop(ctx, composePath, timeout)
+}
+
+func (s *service) Start(ctx context.Context, composePath string) error {
+	return s.executor.ComposeStart(ctx, composePath)
+}
+
+func (s *service) Restart(ctx context.Context, composePath string, timeout int) error {
+	return s.executor.ComposeRestart(ctx, composePath, timeout)
+}
+
+func (s *service) Pause(ctx context.Context, composePath string) error {
+	return s.executor.ComposePause(ctx, composePath)
+}
+
+func (s *service) Unpause(ctx context.Context, composePath string) error {
+	return s.executor.ComposeUnpause(ctx, composePath)
 }
 
 func (s *service) Cleanup(ctx context.Context, options CleanupOptions) error {

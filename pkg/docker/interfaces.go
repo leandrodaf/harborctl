@@ -6,6 +6,11 @@ import "context"
 type Executor interface {
 	ComposeUp(ctx context.Context, file string, build bool) error
 	ComposeDown(ctx context.Context, file string) error
+	ComposeStop(ctx context.Context, file string, timeout int) error
+	ComposeStart(ctx context.Context, file string) error
+	ComposeRestart(ctx context.Context, file string, timeout int) error
+	ComposePause(ctx context.Context, file string) error
+	ComposeUnpause(ctx context.Context, file string) error
 	ImagePrune(ctx context.Context, filters ...string) error
 	BuilderPrune(ctx context.Context, filters ...string) error
 	VolumePrune(ctx context.Context) error
@@ -15,6 +20,11 @@ type Executor interface {
 type Service interface {
 	Deploy(ctx context.Context, composePath string, options DeployOptions) error
 	Teardown(ctx context.Context, composePath string) error
+	Stop(ctx context.Context, composePath string, timeout int) error
+	Start(ctx context.Context, composePath string) error
+	Restart(ctx context.Context, composePath string, timeout int) error
+	Pause(ctx context.Context, composePath string) error
+	Unpause(ctx context.Context, composePath string) error
 	Cleanup(ctx context.Context, options CleanupOptions) error
 }
 
