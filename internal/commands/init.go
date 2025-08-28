@@ -10,6 +10,7 @@ import (
 	"github.com/leandrodaf/harborctl/internal/config"
 	"github.com/leandrodaf/harborctl/pkg/cli"
 	"github.com/leandrodaf/harborctl/pkg/prompt"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // initCommand implements the init command with enhanced features
@@ -178,23 +179,81 @@ func (c *initCommand) runInteractiveSetup(ctx context.Context) error {
 		return fmt.Errorf("failed to get Dozzle preference: %w", err)
 	}
 
+	var dozzleAuth bool
+	var dozzleUsername, dozzlePassword string
+	if includeDozzle {
+		dozzleAuth, err = c.prompter.Confirm("Protect Dozzle with authentication?", true)
+		if err != nil {
+			return fmt.Errorf("failed to get Dozzle auth preference: %w", err)
+		}
+
+		if dozzleAuth {
+			dozzleUsername, err = c.prompter.Text("Dozzle username", "admin")
+			if err != nil {
+				return fmt.Errorf("failed to get Dozzle username: %w", err)
+			}
+
+			dozzlePasswordRaw, err := c.prompter.PasswordWithValidation("Dozzle password", prompt.ValidatePassword)
+			if err != nil {
+				return fmt.Errorf("failed to get Dozzle password: %w", err)
+			}
+
+			dozzlePassword, err = c.hashPassword(dozzlePasswordRaw)
+			if err != nil {
+				return fmt.Errorf("failed to hash Dozzle password: %w", err)
+			}
+		}
+	}
+
 	includeBeszel, err := c.prompter.Confirm("Include Beszel (monitoring)?", true)
 	if err != nil {
 		return fmt.Errorf("failed to get Beszel preference: %w", err)
 	}
 
+	var beszelAuth bool
+	var beszelUsername, beszelPassword string
+	if includeBeszel {
+		beszelAuth, err = c.prompter.Confirm("Protect Beszel with authentication?", true)
+		if err != nil {
+			return fmt.Errorf("failed to get Beszel auth preference: %w", err)
+		}
+
+		if beszelAuth {
+			beszelUsername, err = c.prompter.Text("Beszel username", "admin")
+			if err != nil {
+				return fmt.Errorf("failed to get Beszel username: %w", err)
+			}
+
+			beszelPasswordRaw, err := c.prompter.PasswordWithValidation("Beszel password", prompt.ValidatePassword)
+			if err != nil {
+				return fmt.Errorf("failed to get Beszel password: %w", err)
+			}
+
+			beszelPassword, err = c.hashPassword(beszelPasswordRaw)
+			if err != nil {
+				return fmt.Errorf("failed to hash Beszel password: %w", err)
+			}
+		}
+	}
+
 	// Create configuration
 	options := config.CreateOptions{
-		Domain:      domain,
-		Email:       email,
-		Project:     project,
-		Environment: env,
-		NoDozzle:    !includeDozzle,
-		NoBeszel:    !includeBeszel,
+		Domain:         domain,
+		Email:          email,
+		Project:        project,
+		Environment:    env,
+		NoDozzle:       !includeDozzle,
+		NoBeszel:       !includeBeszel,
+		DozzleAuth:     dozzleAuth,
+		BeszelAuth:     beszelAuth,
+		DozzleUsername: dozzleUsername,
+		DozzlePassword: dozzlePassword,
+		BeszelUsername: beszelUsername,
+		BeszelPassword: beszelPassword,
 	}
 
 	// Show summary
-	c.showConfigSummary(project, domain, email, env, includeDozzle, includeBeszel)
+	c.showConfigSummary(project, domain, email, env, includeDozzle, includeBeszel, dozzleAuth, beszelAuth)
 
 	confirm, err := c.prompter.Confirm("Create project with these settings?", true)
 	if err != nil {
@@ -283,7 +342,7 @@ func (c *initCommand) createProject(ctx context.Context, options config.CreateOp
 	return nil
 }
 
-func (c *initCommand) showConfigSummary(project, domain, email, env string, includeDozzle, includeBeszel bool) {
+func (c *initCommand) showConfigSummary(project, domain, email, env string, includeDozzle, includeBeszel, dozzleAuth, beszelAuth bool) {
 	c.output.Info("")
 	c.output.Info("📋 Configuration Summary:")
 	c.output.Info(fmt.Sprintf("   Project: %s", project))
@@ -296,14 +355,31 @@ func (c *initCommand) showConfigSummary(project, domain, email, env string, incl
 	// Services
 	c.output.Info("   Services:")
 	if includeDozzle {
-		c.output.Info("     • Dozzle (log viewer): ✅ Enabled")
+		if dozzleAuth {
+			c.output.Info("     • Dozzle (log viewer): ✅ Enabled with authentication")
+		} else {
+			c.output.Info("     • Dozzle (log viewer): ✅ Enabled (no authentication)")
+		}
 	} else {
 		c.output.Info("     • Dozzle (log viewer): ❌ Disabled")
 	}
 	if includeBeszel {
-		c.output.Info("     • Beszel (monitoring): ✅ Enabled")
+		if beszelAuth {
+			c.output.Info("     • Beszel (monitoring): ✅ Enabled with authentication")
+		} else {
+			c.output.Info("     • Beszel (monitoring): ✅ Enabled (no authentication)")
+		}
 	} else {
 		c.output.Info("     • Beszel (monitoring): ❌ Disabled")
 	}
 	c.output.Info("")
+}
+
+// hashPassword gera um hash bcrypt da senha
+func (c *initCommand) hashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }

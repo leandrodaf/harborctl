@@ -21,12 +21,18 @@ type Manager interface {
 
 // CreateOptions configura a criação de stack
 type CreateOptions struct {
-	Domain      string
-	Email       string
-	Project     string
-	Environment string
-	NoDozzle    bool
-	NoBeszel    bool
+	Domain         string
+	Email          string
+	Project        string
+	Environment    string
+	NoDozzle       bool
+	NoBeszel       bool
+	DozzleAuth     bool
+	BeszelAuth     bool
+	DozzleUsername string
+	DozzlePassword string
+	BeszelUsername string
+	BeszelPassword string
 }
 
 // manager implementa Manager
@@ -93,6 +99,24 @@ func (m *manager) Create(ctx context.Context, path string, options CreateOptions
 		}
 	}
 
+	var dozzleBasicAuth *BasicAuth
+	if options.DozzleAuth && !options.NoDozzle {
+		dozzleBasicAuth = &BasicAuth{
+			Enabled:  true,
+			Username: options.DozzleUsername,
+			Password: options.DozzlePassword,
+		}
+	}
+
+	var beszelBasicAuth *BasicAuth
+	if options.BeszelAuth && !options.NoBeszel {
+		beszelBasicAuth = &BasicAuth{
+			Enabled:  true,
+			Username: options.BeszelUsername,
+			Password: options.BeszelPassword,
+		}
+	}
+
 	stack := &Stack{
 		Version:     1,
 		Project:     options.Project,
@@ -104,12 +128,14 @@ func (m *manager) Create(ctx context.Context, path string, options CreateOptions
 				Enabled:    !options.NoDozzle,
 				Subdomain:  "logs",
 				DataVolume: "dozzle_data",
+				BasicAuth:  dozzleBasicAuth,
 			},
 			Beszel: Beszel{
 				Enabled:      !options.NoBeszel,
 				Subdomain:    "monitor",
 				DataVolume:   "beszel_data",
 				SocketVolume: "beszel_socket",
+				BasicAuth:    beszelBasicAuth,
 			},
 		},
 		Networks: map[string]Network{

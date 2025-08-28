@@ -376,19 +376,22 @@ func (sb *ServiceBuilderImpl) addResourceLimits(serviceConfig map[string]interfa
 	}
 }
 
-
 // buildBasicAuthUsers constrói a string de usuários para basic auth
 func (sb *ServiceBuilderImpl) buildBasicAuthUsers(auth *config.BasicAuth) string {
 	var users []string
 
 	// Usuário único (legacy)
 	if auth.Username != "" && auth.Password != "" {
-		users = append(users, fmt.Sprintf("%s:%s", auth.Username, auth.Password))
+		// Escapar o caractere $ para Docker Compose duplicando-o
+		escapedPassword := strings.ReplaceAll(auth.Password, "$", "$$")
+		users = append(users, fmt.Sprintf("%s:%s", auth.Username, escapedPassword))
 	}
 
 	// Múltiplos usuários
 	for username, password := range auth.Users {
-		users = append(users, fmt.Sprintf("%s:%s", username, password))
+		// Escapar o caractere $ para Docker Compose duplicando-o
+		escapedPassword := strings.ReplaceAll(password, "$", "$$")
+		users = append(users, fmt.Sprintf("%s:%s", username, escapedPassword))
 	}
 
 	return strings.Join(users, ",")

@@ -80,7 +80,7 @@ func (o *ObservabilityBuilderImpl) buildDozzle(observability config.Observabilit
 	// Adicionar basic auth se configurado
 	if observability.Dozzle.BasicAuth != nil && observability.Dozzle.BasicAuth.Enabled {
 		middlewareName := "dozzle-auth"
-		labels[fmt.Sprintf("traefik.http.routers.dozzle.middlewares")] = middlewareName
+		labels["traefik.http.routers.dozzle.middlewares"] = middlewareName
 		labels[fmt.Sprintf("traefik.http.middlewares.%s.basicauth.users", middlewareName)] = o.buildBasicAuthUsers(observability.Dozzle.BasicAuth)
 	}
 
@@ -148,7 +148,7 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 	// Adicionar basic auth se configurado
 	if observability.Beszel.BasicAuth != nil && observability.Beszel.BasicAuth.Enabled {
 		middlewareName := "beszel-auth"
-		hubLabels[fmt.Sprintf("traefik.http.routers.beszel-hub.middlewares")] = middlewareName
+		hubLabels["traefik.http.routers.beszel-hub.middlewares"] = middlewareName
 		hubLabels[fmt.Sprintf("traefik.http.middlewares.%s.basicauth.users", middlewareName)] = o.buildBasicAuthUsers(observability.Beszel.BasicAuth)
 	}
 
@@ -194,12 +194,16 @@ func (o *ObservabilityBuilderImpl) buildBasicAuthUsers(auth *config.BasicAuth) s
 
 	// Usuário único (legacy)
 	if auth.Username != "" && auth.Password != "" {
-		users = append(users, fmt.Sprintf("%s:%s", auth.Username, auth.Password))
+		// Escapar o caractere $ para Docker Compose duplicando-o
+		escapedPassword := strings.ReplaceAll(auth.Password, "$", "$$")
+		users = append(users, fmt.Sprintf("%s:%s", auth.Username, escapedPassword))
 	}
 
 	// Múltiplos usuários
 	for username, password := range auth.Users {
-		users = append(users, fmt.Sprintf("%s:%s", username, password))
+		// Escapar o caractere $ para Docker Compose duplicando-o
+		escapedPassword := strings.ReplaceAll(password, "$", "$$")
+		users = append(users, fmt.Sprintf("%s:%s", username, escapedPassword))
 	}
 
 	return strings.Join(users, ",")
