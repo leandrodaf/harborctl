@@ -14,7 +14,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// initCommand implements the init command with enhanced features
 type initCommand struct {
 	configManager config.Manager
 	prompter      prompt.Prompter
@@ -22,7 +21,6 @@ type initCommand struct {
 	output        cli.Output
 }
 
-// NewInitCommand creates a new enhanced init command
 func NewInitCommand(configManager config.Manager, output cli.Output) cli.Command {
 	prompter := prompt.NewPrompter()
 	return &initCommand{
@@ -416,7 +414,6 @@ func (c *initCommand) showConfigSummary(project, domain, email, env string, incl
 	c.output.Info("")
 }
 
-// hashPassword gera um hash bcrypt da senha
 func (c *initCommand) hashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

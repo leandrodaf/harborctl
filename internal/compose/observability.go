@@ -8,15 +8,12 @@ import (
 	"github.com/leandrodaf/harborctl/internal/config"
 )
 
-// ObservabilityBuilderImpl implementa ObservabilityBuilder
 type ObservabilityBuilderImpl struct{}
 
-// NewObservabilityBuilder cria um novo ObservabilityBuilder
 func NewObservabilityBuilder() ObservabilityBuilder {
 	return &ObservabilityBuilderImpl{}
 }
 
-// Build constrói serviços de observabilidade
 func (o *ObservabilityBuilderImpl) Build(ctx context.Context, observability config.Observability, domain string, env Environment, options GenerateOptions, project string, tls config.TLS) map[string]map[string]any {
 	services := make(map[string]map[string]any)
 
@@ -35,7 +32,6 @@ func (o *ObservabilityBuilderImpl) Build(ctx context.Context, observability conf
 	return services
 }
 
-// buildDozzle constrói o serviço Dozzle
 func (o *ObservabilityBuilderImpl) buildDozzle(observability config.Observability, domain string, env Environment, project string, tls config.TLS) map[string]any {
 	var entrypoint string
 	var subdomain string
@@ -103,7 +99,6 @@ func (o *ObservabilityBuilderImpl) buildDozzle(observability config.Observabilit
 	return service
 }
 
-// buildBeszel constrói os serviços Beszel
 func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observability, domain string, env Environment, project string, tls config.TLS) (hub, agent map[string]any) {
 	var entrypoint string
 	var subdomain string
@@ -227,7 +222,6 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 	return hub, agent
 }
 
-// buildBasicAuthUsers constrói a string de usuários para basic auth
 func (o *ObservabilityBuilderImpl) buildBasicAuthUsers(auth *config.BasicAuth) string {
 	var users []string
 
@@ -248,7 +242,6 @@ func (o *ObservabilityBuilderImpl) buildBasicAuthUsers(auth *config.BasicAuth) s
 	return strings.Join(users, ",")
 }
 
-// buildBeszelHubEnvironment constrói variáveis de ambiente para o Beszel Hub
 func buildBeszelHubEnvironment(beszel config.Beszel, domain string, env Environment) map[string]string {
 	environment := map[string]string{
 		"PORT": "8090",

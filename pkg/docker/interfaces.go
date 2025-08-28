@@ -2,8 +2,7 @@ package docker
 
 import "context"
 
-// Executor executes Docker commands
-type Executor interface {
+type ComposeExecutor interface {
 	ComposeUp(ctx context.Context, file string, build bool) error
 	ComposeDown(ctx context.Context, file string) error
 	ComposeStop(ctx context.Context, file string, timeout int) error
@@ -11,13 +10,21 @@ type Executor interface {
 	ComposeRestart(ctx context.Context, file string, timeout int) error
 	ComposePause(ctx context.Context, file string) error
 	ComposeUnpause(ctx context.Context, file string) error
+}
+
+type PruneExecutor interface {
 	ImagePrune(ctx context.Context, filters ...string) error
 	BuilderPrune(ctx context.Context, filters ...string) error
 	VolumePrune(ctx context.Context) error
 }
 
-// Service represents Docker operations
-type Service interface {
+// Executor combines compose and prune operations
+type Executor interface {
+	ComposeExecutor
+	PruneExecutor
+}
+
+type LifecycleManager interface {
 	Deploy(ctx context.Context, composePath string, options DeployOptions) error
 	Teardown(ctx context.Context, composePath string) error
 	Stop(ctx context.Context, composePath string, timeout int) error
@@ -25,7 +32,16 @@ type Service interface {
 	Restart(ctx context.Context, composePath string, timeout int) error
 	Pause(ctx context.Context, composePath string) error
 	Unpause(ctx context.Context, composePath string) error
+}
+
+type CleanupManager interface {
 	Cleanup(ctx context.Context, options CleanupOptions) error
+}
+
+// Service combines lifecycle and cleanup operations
+type Service interface {
+	LifecycleManager
+	CleanupManager
 }
 
 // DeployOptions configures deployment
