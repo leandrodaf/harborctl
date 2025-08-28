@@ -1,6 +1,6 @@
-# Templates do Harbor CLI
+# HarborCtl Templates
 
-Templates prontos para usar com Harbor CLI.
+Ready-to-use templates for HarborCtl.
 
 ## 📂 Estrutura
 

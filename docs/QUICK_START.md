@@ -1,67 +1,80 @@
-# Quick Start - Harbor CLI
+# Quick Start - HarborCtl
 
-Comece a usar o Harbor CLI em 5 minutos.
+Get started with HarborCtl in 5 minutes.
 
-## ⚡ Setup Rápido
+## ⚡ Quick Setup
 
-### 1. Instalar Harbor CLI
+### 1. Install HarborCtl
 
+**Super Quick Installation (Direct Binary):**
 ```bash
-curl -sSL https://github.com/company/harborctlr/raw/main/scripts/install.sh | bash
+sudo curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o /usr/local/bin/harborctl && sudo chmod +x /usr/local/bin/harborctl
 ```
 
-### 2. Setup do Servidor (Admin)
+**Auto-detect Architecture:**
+```bash
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64) ARCH="amd64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
+    *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
+esac
+
+curl -sSLf "https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_${ARCH}.tar.gz" | sudo tar -xzC /usr/local/bin harborctl
+```
+
+### 2. Server Setup (Admin)
 
 ```bash
-# No servidor de produção
+# On production server
 harborctl init-server --domain yourdomain.com --email admin@yourdomain.com
 harborctl up -f server-base.yml
 ```
 
-### 3. Deploy de Microserviço (Dev)
+### 3. Microservice Deploy (Dev)
 
 ```bash
-# Criar microserviço
+# Create microservice
 ./scripts/create-microservice.sh my-service api
 
 # Deploy
 harborctl deploy-service --service my-service --repo https://github.com/company/my-service.git
 ```
 
-## 🎯 Exemplo Prático
+## 🎯 Practical Example
 
-### Microserviço de API
+### API Microservice
 
 ```bash
-# 1. Criar estrutura
+# 1. Create structure
 ./scripts/create-microservice.sh auth-api api yourdomain.com
 
-# 2. Configurar secrets no GitHub
+# 2. Configure secrets in GitHub
 # DATABASE_PASSWORD, JWT_SECRET, API_KEY
 
-# 3. Implementar código em src/
-# 4. Commit e push = deploy automático
+# 3. Implement code in src/
+# 4. Commit and push = automatic deploy
 
-# Ou deploy manual
+# Or manual deploy
 harborctl deploy-service --service auth-api
 ```
 
-### Resultado
+### Result
 
 - **API**: https://auth-api.yourdomain.com
 - **Logs**: https://logs.yourdomain.com  
-- **Métricas**: https://monitor.yourdomain.com
+- **Metrics**: https://monitor.yourdomain.com
 
-## 🔧 Comandos Essenciais
+## 🔧 Essential Commands
 
 ```bash
-# Status geral
+# General status
 harborctl status
 
-# Deploy microserviço  
+# Deploy microservice  
 harborctl deploy-service --service NAME
 
-# Escalar
+# Scale
 harborctl scale NAME --replicas 5
 
 # Logs
@@ -71,8 +84,8 @@ harborctl logs NAME --tail 50
 harborctl docs
 ```
 
-## 📚 Próximos Passos
+## 📚 Next Steps
 
-- [📖 Guia Completo](GUIDE.md) - Documentação detalhada
-- [🔧 Scripts](../scripts/) - Automação
-- [📋 Templates](../templates/) - Templates prontos
+- [📖 Complete Guide](GUIDE.md) - Detailed documentation
+- [🔧 Scripts](../scripts/) - Automation
+- [📋 Templates](../templates/) - Ready-to-use templates

@@ -1,53 +1,59 @@
-# Guia Completo - Harbor CLI
+# Complete Guide - HarborCtl
 
-Documentação detalhada do sistema Harbor CLI para deploy de microserviços.
+Detailed documentation of the HarborCtl system for microservice deployment.
 
-## 📖 Índice
+## 📖 Index
 
-1. [Conceitos Básicos](#conceitos-básicos)
-2. [Instalação](#instalação)
-3. [Comandos do Servidor](#comandos-do-servidor)
-4. [Comandos Remotos](#comandos-remotos)
-5. [Configuração](#configuração)
-6. [Exemplos Práticos](#exemplos-práticos)
+1. [Basic Concepts](#basic-concepts)
+2. [Installation](#installation)
+3. [Server Commands](#server-commands)
+4. [Remote Commands](#remote-commands)
+5. [Configuration](#configuration)
+6. [Practical Examples](#practical-examples)
 7. [Troubleshooting](#troubleshooting)
 
-## 🎯 Conceitos Básicos
+## 🎯 Basic Concepts
 
-### Arquitetura
+### Architecture
 
-O Harbor CLI separa responsabilidades em duas camadas:
+HarborCtl separates responsibilities into two layers:
 
-- **🏗️ Servidor Base**: Infraestrutura centralizada (Traefik, observabilidade)
-- **🚀 Microserviços**: Aplicações isoladas deployadas via Git
+- **🏗️ Base Server**: Centralized infrastructure (Traefik, observability)
+- **🚀 Microservices**: Isolated applications deployed via Git
 
-### Fluxo de Trabalho
+### Workflow
 
-1. **Admin** configura servidor base uma vez
-2. **Desenvolvedores** fazem deploy de microserviços independentemente
-3. **CI/CD** automatiza deploys via GitHub Actions
+1. **Admin** configures base server once
+2. **Developers** deploy microservices independently
+3. **CI/CD** automates deployments via GitHub Actions
 
-## 💻 Instalação
+## 💻 Installation
 
-### Via Script (Recomendado)
+### Super Quick Installation (Direct Binary)
 ```bash
-curl -sSL https://github.com/company/harborctlr/raw/main/scripts/install.sh | bash
+sudo curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o /usr/local/bin/harborctl && sudo chmod +x /usr/local/bin/harborctl
 ```
 
-### Manual
+### Auto-detect Architecture
 ```bash
-# Download binary
-curl -sSL https://github.com/company/harborctlr/releases/latest/download/harborctl-linux -o harborctl
-chmod +x harborctl
-sudo mv harborctl /usr/local/bin/
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64) ARCH="amd64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
+    *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
+esac
 
-# Verificar instalação
+curl -sSLf "https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_${ARCH}.tar.gz" | sudo tar -xzC /usr/local/bin harborctl
+```
+
+### Verify Installation
+```bash
 harborctl --version
 ```
 
-### Compilar do Código
+### Build from Source
 ```bash
-git clone https://github.com/company/harborctlr.git
+git clone https://github.com/leandrodaf/harborctl.git
 cd harborctlr
 go build -o harborctl ./cmd/harborctl
 ```
@@ -205,7 +211,7 @@ sudo usermod -aG docker harbor
 sudo su - harbor
 
 # Clone o harborctlr
-git clone https://github.com/company/harborctlr.git /opt/harbor
+git clone https://github.com/leandrodaf/harborctl.git /opt/harbor
 cd /opt/harbor
 
 # Setup automático
@@ -304,4 +310,4 @@ harborctl status --json
 - [Quick Start](QUICK_START.md) - Começar rapidamente
 - [Scripts](../scripts/) - Scripts de automação  
 - [Templates](../templates/) - Templates prontos
-- [GitHub Issues](https://github.com/company/harborctlr/issues) - Suporte
+- [GitHub Issues](https://github.com/leandrodaf/harborctl/issues) - Support

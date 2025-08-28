@@ -1,58 +1,64 @@
 #!/bin/bash
-# Instalador do Harbor CLI
+# HarborCtl Installer
 
 set -e
 
-# Detectar OS e arquitetura
+# Detect OS and architecture
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 
 case $ARCH in
     x86_64) ARCH="amd64" ;;
     arm64|aarch64) ARCH="arm64" ;;
-    *) echo "❌ Arquitetura não suportada: $ARCH"; exit 1 ;;
+    *) echo "❌ Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
-# URLs de download
-GITHUB_REPO="company/harborctlr"
+# Download URLs
+GITHUB_REPO="leandrodaf/harborctl"
 BINARY_NAME="harborctl"
-DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/${BINARY_NAME}-${OS}-${ARCH}"
 
-echo "🚀 Instalando Harbor CLI..."
+# Get latest release tag
+LATEST_TAG=$(curl -s "https://api.github.com/repos/${GITHUB_REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+# Build download URL with correct asset naming
+DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/${LATEST_TAG}/${BINARY_NAME}_${LATEST_TAG}_linux_${ARCH}"
+
+echo "🚀 Installing HarborCtl..."
 echo "   OS: $OS"
 echo "   Arch: $ARCH"
+echo "   Version: $LATEST_TAG"
 
 # Download
-echo "📥 Baixando $BINARY_NAME..."
-curl -sSL "$DOWNLOAD_URL" -o "$BINARY_NAME"
+echo "📥 Downloading $BINARY_NAME..."
+curl -sSLf "$DOWNLOAD_URL" -o "$BINARY_NAME"
 
-# Tornar executável
+# Make executable
 chmod +x "$BINARY_NAME"
 
-# Instalar
+# Install
 if [ -w "/usr/local/bin" ]; then
     mv "$BINARY_NAME" "/usr/local/bin/"
-    echo "✅ Harbor CLI instalado em /usr/local/bin/$BINARY_NAME"
+    echo "✅ HarborCtl installed in /usr/local/bin/$BINARY_NAME"
 elif sudo -n true 2>/dev/null; then
     sudo mv "$BINARY_NAME" "/usr/local/bin/"
-    echo "✅ Harbor CLI instalado em /usr/local/bin/$BINARY_NAME (com sudo)"
+    echo "✅ HarborCtl installed in /usr/local/bin/$BINARY_NAME (with sudo)"
 else
-    echo "⚠️  Instale manualmente:"
+    echo "⚠️  Install manually:"
     echo "   sudo mv $BINARY_NAME /usr/local/bin/"
     exit 1
 fi
 
-# Verificar instalação
+# Verify installation
 if command -v $BINARY_NAME >/dev/null 2>&1; then
-    echo "🎉 Instalação concluída!"
+    echo "🎉 Installation completed!"
     echo ""
-    echo "📋 Próximos passos:"
-    echo "   • Setup servidor: $BINARY_NAME init-server --domain yourdomain.com --email admin@yourdomain.com"
-    echo "   • Deploy serviço: $BINARY_NAME deploy-service --service my-service --repo https://github.com/company/my-service.git"
-    echo "   • Ver ajuda: $BINARY_NAME docs"
+    echo "📋 Next steps:"
+    echo "   • Server setup: $BINARY_NAME init-server --domain yourdomain.com --email admin@yourdomain.com"
+    echo "   • Deploy service: $BINARY_NAME deploy-service --service my-service --repo https://github.com/company/my-service.git"
+    echo "   • View help: $BINARY_NAME docs"
     echo ""
     $BINARY_NAME --version
 else
-    echo "❌ Falha na instalação"
+    echo "❌ Installation failed"
     exit 1
 fi

@@ -1,4 +1,4 @@
-# Harbor CLI - Guia de Comandos
+# HarborCtl - Command Guide
 
 Este guia separa claramente os comandos por contexto de uso.
 
@@ -103,7 +103,7 @@ harborctl up auth-service
 ```bash
 # No servidor de produção
 cd /opt/harbor
-git clone https://github.com/company/harborctlr.git .
+git clone https://github.com/leandrodaf/harborctl.git .
 
 # Inicializar infraestrutura base
 harborctl init-server --domain production.company.com --email devops@company.com

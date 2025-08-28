@@ -131,9 +131,9 @@ jobs:
     environment: staging
     
     steps:
-    - name: 📥 Install Harbor CLI
+    - name: 📥 Install HarborCtl
       run: |
-        curl -sSL https://github.com/SEU-USUARIO/harbor-cli/releases/latest/download/harborctl-linux-amd64 -o harborctl
+        curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o harborctl
         chmod +x harborctl
         sudo mv harborctl /usr/local/bin/
     
@@ -163,9 +163,9 @@ jobs:
     environment: production
     
     steps:
-    - name: � Install Harbor CLI
+    - name: 📥 Install HarborCtl
       run: |
-        curl -sSL https://github.com/SEU-USUARIO/harbor-cli/releases/latest/download/harborctl-linux-amd64 -o harborctl
+        curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o harborctl
         chmod +x harborctl
         sudo mv harborctl /usr/local/bin/
     
@@ -202,7 +202,7 @@ jobs:
         MONITOR_USER: ${{ github.ref == 'refs/heads/main' && secrets.PRODUCTION_USER || secrets.STAGING_USER }}
         MONITOR_KEY: ${{ github.ref == 'refs/heads/main' && secrets.PRODUCTION_SSH_KEY || secrets.STAGING_SSH_KEY }}
       run: |
-        curl -sSL https://github.com/SEU-USUARIO/harbor-cli/releases/latest/download/harborctl-linux-amd64 -o harborctl
+        curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o harborctl
         chmod +x harborctl
         
         echo "$MONITOR_KEY" > monitor_key

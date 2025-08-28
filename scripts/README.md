@@ -1,4 +1,11 @@
-# Scripts do Harbor CLI
+# HarborCtl Scripts
+
+Automation scripts to facilitate the use of HarborCtl.
+
+## 📦 Available Scripts
+
+### 🔧 install.sh
+Automatic HarborCtl installer.s do Harbor CLI
 
 Scripts de automação para facilitar o uso do Harbor CLI.
 
@@ -8,11 +15,11 @@ Scripts de automação para facilitar o uso do Harbor CLI.
 Instalador automático do Harbor CLI.
 
 ```bash
-# Instalação automática
-curl -sSL https://github.com/company/harborctlr/raw/main/scripts/install.sh | bash
+# Automatic installation
+curl -sSL https://github.com/leandrodaf/harborctl/raw/main/scripts/install.sh | bash
 
-# Ou download e execução manual
-wget https://github.com/company/harborctlr/raw/main/scripts/install.sh
+# Or download and manual execution
+wget https://github.com/leandrodaf/harborctl/raw/main/scripts/install.sh
 chmod +x install.sh
 ./install.sh
 ```
@@ -53,12 +60,12 @@ Cria estrutura completa de microserviço.
 
 ## 🎯 Fluxo de Uso
 
-### 1. Setup Inicial (Admin)
+### 1. Initial Setup (Admin)
 ```bash
-# Instalar Harbor CLI
-curl -sSL https://github.com/company/harborctlr/raw/main/scripts/install.sh | bash
+# Install HarborCtl
+curl -sSL https://github.com/leandrodaf/harborctl/raw/main/scripts/install.sh | bash
 
-# Setup do servidor
+# Server setup
 ./scripts/setup-production-server.sh production.example.com admin@example.com
 ```
 

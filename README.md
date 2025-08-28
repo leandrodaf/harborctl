@@ -1,115 +1,213 @@
-# 🚢 Harbor CLI - Deployment Tool
+# 🚢 HarborCtl - Docker Compose Deployment Tool
 
-> Uma ferramenta CLI moderna para orquestração e deploy de microserviços usando Docker Compose e Traefik.
+> A modern CLI tool for orchestrating and deploying microservices using Docker Compose and Traefik.
 
-## 🎯 O que é o Harbor CLI?
+## 🎯 What is HarborCtl?
 
-O Harbor CLI é uma ferramenta que automatiza o processo de deploy e gerenciamento de microserviços. Ele gera configurações Docker Compose otimizadas, configura roteamento automático com Traefik e oferece comandos simples para deploy remoto.
+HarborCtl is a tool that automates the process of deploying and managing microservices. It generates optimized Docker Compose configurations, sets up automatic routing with Traefik, and provides simple commands for remote deployment.
 
-## 🏗️ Conceitos
+## 🏗️ Concepts
 
-### � Como Biblioteca (este repositório)
-Este repositório contém o **código-fonte** do Harbor CLI:
-- ✅ Build e release de binários
-- ✅ Testes e validação
-- ✅ Templates para microserviços
-- ✅ Documentação da ferramenta
+### 📚 As a Library (this repository)
+This repository contains the **source code** of HarborCtl:
+- ✅ Build and release of binaries
+- ✅ Testing and validation
+- ✅ Templates for microservices
+- ✅ Tool documentation
 
-### 🚀 Como Ferramenta nos Microserviços
-Os microserviços **usam** o Harbor CLI para deploy:
-- ✅ GitHub Actions baixam binário do Harbor CLI
-- ✅ Executam comandos de deploy remotamente
-- ✅ Usam templates fornecidos por este repo
+### 🚀 As a Tool in Microservices
+Microservices **use** HarborCtl for deployment:
+- ✅ GitHub Actions download HarborCtl binary
+- ✅ Execute deployment commands remotely
+- ✅ Use templates provided by this repo
 
-## 📥 Instalação
+## 📥 Installation
 
-### Instalação Automática (Recomendado)
+### Super Quick Installation (Direct Binary)
+
+**For amd64 (Intel/AMD):**
 ```bash
-curl -sSL https://raw.githubusercontent.com/SEU-USUARIO/harbor-cli/main/scripts/install.sh | bash
+sudo curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o /usr/local/bin/harborctl && sudo chmod +x /usr/local/bin/harborctl
 ```
 
-### Download Manual
+**For arm64 (ARM64):**
 ```bash
-# Linux x64
-curl -sSL https://github.com/SEU-USUARIO/harbor-cli/releases/latest/download/harborctl-linux-amd64 -o harborctl
-chmod +x harborctl
-sudo mv harborctl /usr/local/bin/
-
-# macOS x64
-curl -sSL https://github.com/SEU-USUARIO/harbor-cli/releases/latest/download/harborctl-darwin-amd64 -o harborctl
-chmod +x harborctl
-sudo mv harborctl /usr/local/bin/
-
-# Windows x64
-curl -sSL https://github.com/SEU-USUARIO/harbor-cli/releases/latest/download/harborctl-windows-amd64.exe -o harborctl.exe
+sudo curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_arm64 -o /usr/local/bin/harborctl && sudo chmod +x /usr/local/bin/harborctl
 ```
 
-### ✅ Verificar Instalação
+### Automatic Installation (Compressed Archive)
+
+**For amd64 (Intel/AMD):**
+```bash
+curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64.tar.gz | sudo tar -xzC /usr/local/bin harborctl
+```
+
+### Auto-detect Architecture
+```bash
+ARCH=$(uname -m)
+case $ARCH in
+    x86_64) ARCH="amd64" ;;
+    aarch64|arm64) ARCH="arm64" ;;
+    *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
+esac
+
+curl -sSLf "https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_${ARCH}.tar.gz" | sudo tar -xzC /usr/local/bin harborctl
+```
+
+### ✅ Verify Installation
 ```bash
 harborctl --version
+harborctl --help
 ```
 
-## � Quick Start
+## 🚀 Quick Start
 
-### 1️⃣ Servidor (Comando Local)
+### 1️⃣ Server (Local Command)
 ```bash
-# Configurar servidor de produção
-harborctl init-server --domain exemplo.com
+# Configure production server
+harborctl init-server --domain example.com
 
-# Subir infraestrutura
+# Start infrastructure
 harborctl up
 
-# Verificar status
+# Check status
 harborctl status
 ```
 
-### 2️⃣ Microserviço (Comando Remoto)
+### 2️⃣ Microservice (Remote Command)
 ```bash
-# Criar novo microserviço
-harborctl init --name minha-api --type node
+# Create new microservice
+harborctl init --name my-api --type node
 
-# Deploy de microserviço
+# Deploy microservice
 harborctl deploy-service \
-  --host servidor.exemplo.com \
-  --service minha-api \
-  --image ghcr.io/usuario/minha-api:latest
+  --host server.example.com \
+  --service my-api \
+  --image ghcr.io/user/my-api:latest
 ```
 
-## 📚 Documentação
+## 📚 Documentation
 
-| Documento | Descrição |
+| Document | Description |
 |-----------|-----------|
-| [📖 Quick Start](docs/QUICK_START.md) | Primeiros passos e exemplos práticos |
-| [📘 Guia Completo](docs/GUIDE.md) | Documentação detalhada |
-| [⚡ Guia de Comandos](docs/COMMAND_GUIDE.md) | Referência de todos os comandos |
+| [📖 Quick Start](docs/QUICK_START.md) | First steps and practical examples |
+| [📘 Complete Guide](docs/GUIDE.md) | Detailed documentation |
+| [⚡ Command Guide](docs/COMMAND_GUIDE.md) | Reference for all commands |
 
-## 🛠️ Comandos Principais
+## 🛠️ Main Commands
 
-### 🖥️ Comandos do Servidor (Local)
+### 🖥️ Server Commands (Local)
 ```bash
-# Inicializar servidor
-harborctl init-server --domain exemplo.com
+# Initialize server
+harborctl init-server --domain example.com
 
-# Gerenciar infraestrutura
-harborctl up          # Subir serviços
-harborctl down        # Derrubar serviços
-harborctl status      # Ver status
-harborctl scale       # Escalar serviços
+# Manage infrastructure
+harborctl up          # Start services
+harborctl down        # Stop services
+harborctl status      # View status
+harborctl scale       # Scale services
 ```
 
-### 🚀 Comandos Remotos
+### 🚀 Remote Commands
 ```bash
-# Deploy de microserviço
-harborctl deploy-service \
-  --host servidor.com \
-  --service api-users \
+### 🚀 Remote Commands
+```bash
+# Deploy microservice
+harborctl deploy-service 
+  --host server.com 
+  --service api-users 
   --image ghcr.io/company/api-users:v1.2.0
 
-# Criar microserviço
-harborctl init \
-  --name nova-api \
-  --type python \
+# Create microservice
+harborctl init 
+  --name new-api 
+  --type python 
   --template fastapi
+```
+
+## 🎨 Available Templates
+
+### 📁 Microservices
+```bash
+# Create Node.js microservice
+harborctl init --name my-api --type node
+
+# Create Python microservice
+harborctl init --name my-api --type python --template fastapi
+
+# Create Go microservice
+harborctl init --name my-api --type go
+```
+
+### ⚙️ GitHub Actions
+GitHub Actions templates are in `templates/github-actions/`:
+
+- **deploy.yml**: Complete CI/CD pipeline
+- **auto-scale.yml**: Monitoring and auto-scaling
+
+#### How to use in microservices:
+```bash
+# Copy template to your microservice
+cp templates/github-actions/deploy.yml .github/workflows/
+
+# Customize variables in the file
+# Configure secrets in GitHub:
+# - PRODUCTION_HOST
+# - PRODUCTION_USER  
+# - PRODUCTION_SSH_KEY
+```
+
+## 🔧 Automation Scripts
+
+| Script | Description |
+|--------|-----------|
+| `scripts/install.sh` | Automatic HarborCtl installation |
+| `scripts/setup-production-server.sh` | Production server configuration |
+| `scripts/create-microservice.sh` | Complete microservice creation |
+
+## 🏗️ Development
+
+### Requirements
+- Go 1.24+
+- Docker
+- Docker Compose
+
+### Local Build
+```bash
+# Clone the repository
+git clone https://github.com/leandrodaf/harborctl.git
+cd harborctl
+
+# Build
+go build -o harborctl ./cmd/harborctl
+
+# Tests
+go test ./...
+```
+
+### Release
+Release is automated via GitHub Actions:
+1. Create a tag: `git tag v1.2.0`
+2. Push the tag: `git push origin v1.2.0`
+3. GitHub Actions generates binaries for all platforms
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+## 🆘 Support
+
+- 📖 [Complete Documentation](docs/)
+- 🐛 [Report Bugs](https://github.com/leandrodaf/harborctl/issues)
+- 💡 [Request Features](https://github.com/leandrodaf/harborctl/issues/new)
+
+---
+
+<div align="center">
+  <strong>🚢 HarborCtl - Simplifying microservice deployments</strong>
+</div>
 ```
 
 ## 🎨 Templates Disponíveis
@@ -144,31 +242,31 @@ cp templates/github-actions/deploy.yml .github/workflows/
 # - PRODUCTION_SSH_KEY
 ```
 
-## 🔧 Scripts de Automação
+## 🔧 Automation Scripts
 
-| Script | Descrição |
+| Script | Description |
 |--------|-----------|
-| `scripts/install.sh` | Instalação automática do Harbor CLI |
-| `scripts/setup-production-server.sh` | Configuração de servidor de produção |
-| `scripts/create-microservice.sh` | Criação de microserviço completo |
+| `scripts/install.sh` | Automatic HarborCtl installation |
+| `scripts/setup-production-server.sh` | Production server configuration |
+| `scripts/create-microservice.sh` | Complete microservice creation |
 
-## 🏗️ Desenvolvimento
+## 🏗️ Development
 
-### Requisitos
+### Requirements
 - Go 1.24+
 - Docker
 - Docker Compose
 
-### Build Local
+### Local Build
 ```bash
-# Clone o repositório
-git clone https://github.com/SEU-USUARIO/harbor-cli.git
-cd harbor-cli
+# Clone the repository
+git clone https://github.com/leandrodaf/harborctl.git
+cd harborctl
 
 # Build
 go build -o harborctl ./cmd/harborctl
 
-# Testes
+# Tests
 go test ./...
 ```
 
@@ -184,18 +282,14 @@ MIT License - veja [LICENSE](LICENSE) para detalhes.
 
 ---
 
-## 🆘 Suporte
+## 🆘 Support
 
-- 📖 [Documentação Completa](docs/)
-- 🐛 [Reportar Bugs](https://github.com/SEU-USUARIO/harbor-cli/issues)
-- 💡 [Solicitar Features](https://github.com/SEU-USUARIO/harbor-cli/issues/new)
+- 📖 [Complete Documentation](docs/)
+- 🐛 [Report Bugs](https://github.com/leandrodaf/harborctl/issues)
+- 💡 [Request Features](https://github.com/leandrodaf/harborctl/issues/new)
 
 ---
 
 <div align="center">
-  <strong>🚢 Harbor CLI - Simplificando deploys de microserviços</strong>
+  <strong>🚢 HarborCtl - Simplifying microservice deployments</strong>
 </div>
-
-- **Issues**: [GitHub Issues](https://github.com/company/harborctlr/issues)
-- **Docs**: [Documentação](docs/)
-- **Email**: devops@company.com
