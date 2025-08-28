@@ -394,6 +394,10 @@ type Beszel struct {
 	DataVolume   string     `yaml:"data_volume"`
 	SocketVolume string     `yaml:"socket_volume"`
 	BasicAuth    *BasicAuth `yaml:"basic_auth,omitempty"`
+	HubKey       string     `yaml:"hub_key,omitempty"`      // Chave pública do Hub para o Agent
+	HubKeyFile   string     `yaml:"hub_key_file,omitempty"` // Caminho para arquivo com chave pública
+	Token        string     `yaml:"token,omitempty"`        // Token de autenticação
+	HubURL       string     `yaml:"hub_url,omitempty"`      // URL do Hub (padrão: http://beszel-hub:8090)
 }
 
 // Network representa uma network Docker

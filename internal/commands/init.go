@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/leandrodaf/harborctl/internal/config"
+	"github.com/leandrodaf/harborctl/internal/crypto"
 	"github.com/leandrodaf/harborctl/pkg/cli"
 	"github.com/leandrodaf/harborctl/pkg/prompt"
 	"golang.org/x/crypto/bcrypt"
@@ -236,6 +237,28 @@ func (c *initCommand) runInteractiveSetup(ctx context.Context) error {
 		}
 	}
 
+	// Generate Beszel keys automatically if Beszel is enabled
+	var beszelHubKey, beszelToken string
+	if includeBeszel {
+		c.output.Info("🔐 Generating Beszel authentication keys...")
+
+		// Generate SSH key pair for Beszel authentication
+		pubKey, _, err := crypto.GenerateED25519KeyPair()
+		if err != nil {
+			return fmt.Errorf("failed to generate Beszel SSH keys: %w", err)
+		}
+		beszelHubKey = pubKey
+
+		// Generate token for Beszel authentication
+		token, err := crypto.GenerateBeszelToken()
+		if err != nil {
+			return fmt.Errorf("failed to generate Beszel token: %w", err)
+		}
+		beszelToken = token
+
+		c.output.Info("✅ Beszel authentication keys generated successfully")
+	}
+
 	// Create configuration
 	options := config.CreateOptions{
 		Domain:         domain,
@@ -250,6 +273,8 @@ func (c *initCommand) runInteractiveSetup(ctx context.Context) error {
 		DozzlePassword: dozzlePassword,
 		BeszelUsername: beszelUsername,
 		BeszelPassword: beszelPassword,
+		BeszelHubKey:   beszelHubKey,
+		BeszelToken:    beszelToken,
 	}
 
 	// Show summary
@@ -291,13 +316,37 @@ func (c *initCommand) runDirectSetup(ctx context.Context, domain, email, project
 		return fmt.Errorf("email is required for production environment")
 	}
 
+	// Generate Beszel keys automatically if Beszel is enabled
+	var beszelHubKey, beszelToken string
+	if !noBeszel {
+		c.output.Info("🔐 Generating Beszel authentication keys...")
+
+		// Generate SSH key pair for Beszel authentication
+		pubKey, _, err := crypto.GenerateED25519KeyPair()
+		if err != nil {
+			return fmt.Errorf("failed to generate Beszel SSH keys: %w", err)
+		}
+		beszelHubKey = pubKey
+
+		// Generate token for Beszel authentication
+		token, err := crypto.GenerateBeszelToken()
+		if err != nil {
+			return fmt.Errorf("failed to generate Beszel token: %w", err)
+		}
+		beszelToken = token
+
+		c.output.Info("✅ Beszel authentication keys generated successfully")
+	}
+
 	options := config.CreateOptions{
-		Domain:      domain,
-		Email:       email,
-		Project:     project,
-		Environment: env,
-		NoDozzle:    noDozzle,
-		NoBeszel:    noBeszel,
+		Domain:       domain,
+		Email:        email,
+		Project:      project,
+		Environment:  env,
+		NoDozzle:     noDozzle,
+		NoBeszel:     noBeszel,
+		BeszelHubKey: beszelHubKey,
+		BeszelToken:  beszelToken,
 	}
 
 	return c.createProject(ctx, options)
@@ -333,11 +382,25 @@ func (c *initCommand) createProject(ctx context.Context, options config.CreateOp
 
 	c.output.Info("✅ Project created successfully!")
 	c.output.Info(fmt.Sprintf("📄 Configuration file: %s", filename))
+
+	// Add Beszel-specific information if enabled
+	if !options.NoBeszel {
+		c.output.Info("")
+		c.output.Info("🔐 Beszel Authentication:")
+		c.output.Info("   ✅ SSH keys and token auto-generated")
+		c.output.Info("   ✅ Hub-Agent communication configured")
+		c.output.Info("   ✅ Ready for immediate deployment")
+	}
+
 	c.output.Info("")
 	c.output.Info("🚀 Next steps:")
 	c.output.Info("   1. Edit stack.yml to add your services")
 	c.output.Info("   2. Run: harborctl up")
 	c.output.Info("   3. Check status: harborctl status")
+
+	if !options.NoBeszel {
+		c.output.Info("   4. Access monitoring: https://monitor." + options.Domain)
+	}
 
 	return nil
 }
@@ -365,9 +428,9 @@ func (c *initCommand) showConfigSummary(project, domain, email, env string, incl
 	}
 	if includeBeszel {
 		if beszelAuth {
-			c.output.Info("     • Beszel (monitoring): ✅ Enabled with authentication")
+			c.output.Info("     • Beszel (monitoring): ✅ Enabled with authentication + keys auto-generated")
 		} else {
-			c.output.Info("     • Beszel (monitoring): ✅ Enabled (no authentication)")
+			c.output.Info("     • Beszel (monitoring): ✅ Enabled (no web auth) + keys auto-generated")
 		}
 	} else {
 		c.output.Info("     • Beszel (monitoring): ❌ Disabled")

@@ -33,6 +33,8 @@ type CreateOptions struct {
 	DozzlePassword string
 	BeszelUsername string
 	BeszelPassword string
+	BeszelHubKey   string // Chave SSH gerada automaticamente
+	BeszelToken    string // Token gerado automaticamente
 }
 
 // manager implementa Manager
@@ -136,6 +138,8 @@ func (m *manager) Create(ctx context.Context, path string, options CreateOptions
 				DataVolume:   "beszel_data",
 				SocketVolume: "beszel_socket",
 				BasicAuth:    beszelBasicAuth,
+				HubKey:       options.BeszelHubKey,
+				Token:        options.BeszelToken,
 			},
 		},
 		Networks: map[string]Network{

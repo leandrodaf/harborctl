@@ -158,6 +158,7 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		"container_name": "beszel-hub",
 		"volumes": []string{
 			observability.Beszel.DataVolume + ":/beszel_data",
+			observability.Beszel.SocketVolume + ":/beszel_socket",
 		},
 		"environment": map[string]string{
 			"PORT": "8090",
@@ -167,22 +168,50 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		"labels":   hubLabels,
 	}
 
-	// Beszel Agent - configuração melhorada para conectividade Docker
+	// Beszel Agent - configuração seguindo documentação oficial
+	agentEnvironment := map[string]string{
+		"LISTEN":  "/beszel_socket/beszel.sock", // Usar socket Unix para comunicação local
+		"HUB_URL": "http://beszel-hub:8090",     // URL do hub
+	}
+
+	// Configurar token se fornecido
+	if observability.Beszel.Token != "" {
+		agentEnvironment["TOKEN"] = observability.Beszel.Token
+	} else {
+		agentEnvironment["TOKEN"] = "CONFIGURE_TOKEN_IN_BESZEL_CONFIG"
+	}
+
+	// Configurar chave pública para autenticação
+	if observability.Beszel.HubKey != "" {
+		agentEnvironment["KEY"] = observability.Beszel.HubKey
+	} else if observability.Beszel.HubKeyFile != "" {
+		agentEnvironment["KEY_FILE"] = observability.Beszel.HubKeyFile
+	} else {
+		// Aviso: sem chave configurada, o agent falhará
+		agentEnvironment["KEY"] = "CONFIGURE_HUB_KEY_IN_BESZEL_CONFIG"
+	}
+
+	// Configurar HUB_URL personalizada se fornecida
+	if observability.Beszel.HubURL != "" {
+		agentEnvironment["HUB_URL"] = observability.Beszel.HubURL
+	}
+
+	agentVolumes := []string{
+		fmt.Sprintf("%s:/var/run/docker.sock:ro", dockerSocket),
+		observability.Beszel.SocketVolume + ":/beszel_socket",
+		"./beszel_agent_data:/var/lib/beszel-agent",
+	}
+
 	agent = map[string]any{
 		"image":          "henrygd/beszel-agent:latest",
 		"container_name": "beszel-agent",
-		"environment": map[string]string{
-			"PORT":        "45876",
-			"DOCKER_HOST": "unix:///var/run/docker.sock", // Garantir que usa o socket correto
-		},
-		"volumes": []string{
-			fmt.Sprintf("%s:/var/run/docker.sock:ro", dockerSocket),
-		},
-		"networks":     []string{"private"},
-		"restart":      "unless-stopped",
-		"user":         "0", // Executar como root para acessar Docker socket
-		"privileged":   false,
-		"security_opt": []string{"no-new-privileges:true"},
+		"environment":    agentEnvironment,
+		"volumes":        agentVolumes,
+		"network_mode":   "host", // Necessário para estatísticas de rede do host
+		"restart":        "unless-stopped",
+		"user":           "0", // Executar como root para acessar Docker socket
+		"privileged":     false,
+		"security_opt":   []string{"no-new-privileges:true"},
 	}
 
 	return hub, agent
