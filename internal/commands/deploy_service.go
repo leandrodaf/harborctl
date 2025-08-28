@@ -138,7 +138,7 @@ func (c *deployServiceCommand) getServiceCode(ctx context.Context, serviceName, 
 	if repoURL == "" {
 		if exists := c.filesystem.Exists(serviceDir); exists {
 			c.output.Infof("📁 Usando código local em: %s", serviceDir)
-			return serviceDir, nil
+			return filepath.Join(serviceDir, path), nil
 		}
 		return "", fmt.Errorf("código do serviço não encontrado e --repo não especificado")
 	}
