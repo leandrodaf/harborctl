@@ -63,50 +63,50 @@ func (c *deployServiceCommand) Execute(ctx context.Context, args []string) error
 	var dryRun, force bool
 	var replicas int
 
-	fs.StringVar(&serviceName, "service", "", "nome do microserviço")
-	fs.StringVar(&repoURL, "repo", "", "URL do repositório (opcional se já clonado)")
-	fs.StringVar(&branch, "branch", "main", "branch do repositório")
-	fs.StringVar(&path, "path", "deploy", "caminho do stack.yml no repositório")
-	fs.StringVar(&envFile, "env-file", "", "arquivo de variáveis de ambiente")
-	fs.StringVar(&secretsFile, "secrets-file", "", "arquivo de secrets")
-	fs.IntVar(&replicas, "replicas", 0, "número de réplicas (override)")
-	fs.BoolVar(&dryRun, "dry-run", false, "apenas validar sem fazer deploy")
-	fs.BoolVar(&force, "force", false, "forçar deploy ignorando warnings")
+	fs.StringVar(&serviceName, "service", "", "microservice name")
+	fs.StringVar(&repoURL, "repo", "", "repository URL (optional if already cloned)")
+	fs.StringVar(&branch, "branch", "main", "repository branch")
+	fs.StringVar(&path, "path", "deploy", "stack.yml path in repository")
+	fs.StringVar(&envFile, "env-file", "", "environment variables file")
+	fs.StringVar(&secretsFile, "secrets-file", "", "secrets file")
+	fs.IntVar(&replicas, "replicas", 0, "number of replicas (override)")
+	fs.BoolVar(&dryRun, "dry-run", false, "validate only without deploying")
+	fs.BoolVar(&force, "force", false, "force deployment ignoring warnings")
 
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
 	if serviceName == "" {
-		return fmt.Errorf("--service é obrigatório")
+		return fmt.Errorf("--service is required")
 	}
 
-	c.output.Infof("🚀 Deployando microserviço: %s", serviceName)
+	c.output.Infof("🚀 Deploying microservice: %s", serviceName)
 
-	// Carregar configuração base do servidor
+	// Load server base configuration
 	baseConfig, err := c.loadBaseConfig(ctx)
 	if err != nil {
-		c.output.Error("❌ Configuração base não encontrada. Execute primeiro:")
-		c.output.Error("   harborctl init-server --domain <seu-dominio> --email <seu-email>")
+		c.output.Error("❌ Base configuration not found. Run first:")
+		c.output.Error("   harborctl init-server --domain <your-domain> --email <your-email>")
 		return err
 	}
 
-	// Obter código do microserviço
+	// Get microservice code
 	serviceDir, err := c.getServiceCode(ctx, serviceName, repoURL, branch, path)
 	if err != nil {
-		return fmt.Errorf("erro ao obter código do serviço: %w", err)
+		return fmt.Errorf("error getting service code: %w", err)
 	}
 
-	// Carregar configuração do microserviço
+	// Load microservice configuration
 	stackPath := filepath.Join(serviceDir, "stack.yml")
 	serviceConfig, err := c.configManager.Load(ctx, stackPath)
 	if err != nil {
-		return fmt.Errorf("erro ao carregar stack.yml do serviço: %w", err)
+		return fmt.Errorf("error loading service stack.yml: %w", err)
 	}
 
-	// Aplicar overrides de env e secrets
+	// Apply env and secrets overrides
 	if err := c.applyRuntimeOverrides(serviceConfig, envFile, secretsFile, replicas); err != nil {
-		return fmt.Errorf("erro ao aplicar overrides: %w", err)
+		return fmt.Errorf("error applying overrides: %w", err)
 	}
 
 	// Merge com configuração base (sem duplicar infraestrutura)
@@ -125,7 +125,7 @@ func (c *deployServiceCommand) Execute(ctx context.Context, args []string) error
 		return nil
 	}
 
-	// Deploy do microserviço
+	// Deploy microservice
 	return c.deployMicroservice(ctx, mergedConfig, serviceName)
 }
 
@@ -146,11 +146,11 @@ func (c *deployServiceCommand) getServiceCode(ctx context.Context, serviceName, 
 			c.output.Infof("📁 Usando código local em: %s", serviceDir)
 			return filepath.Join(serviceDir, path), nil
 		}
-		return "", fmt.Errorf("código do serviço não encontrado e --repo não especificado")
+		return "", fmt.Errorf("service code not found and --repo not specified")
 	}
 
-	// Clonar ou atualizar repositório
-	c.output.Infof("📦 Obtendo código do repositório: %s", repoURL)
+	// Clone or update repository
+	c.output.Infof("📦 Getting code from repository: %s", repoURL)
 
 	if err := c.filesystem.MkdirAll(".services", 0755); err != nil {
 		return "", err
@@ -160,31 +160,31 @@ func (c *deployServiceCommand) getServiceCode(ctx context.Context, serviceName, 
 	if exists := c.filesystem.Exists(serviceDir); exists {
 		// Fazer pull
 		if err := c.gitClient.Pull(ctx, serviceDir, branch); err != nil {
-			return "", fmt.Errorf("erro ao atualizar repositório: %w", err)
+			return "", fmt.Errorf("error updating repository: %w", err)
 		}
-		c.output.Info("✅ Repositório atualizado")
+		c.output.Info("✅ Repository updated")
 	} else {
 		// Clonar
 		token := getTokenFromEnv("GITHUB_TOKEN") // Tentar obter token
 		if err := c.gitClient.Clone(ctx, repoURL, serviceDir, token); err != nil {
-			return "", fmt.Errorf("erro ao clonar repositório: %w", err)
+			return "", fmt.Errorf("error cloning repository: %w", err)
 		}
-		c.output.Info("✅ Repositório clonado")
+		c.output.Info("✅ Repository cloned")
 	}
 
 	return filepath.Join(serviceDir, path), nil
 }
 
 func (c *deployServiceCommand) applyRuntimeOverrides(serviceConfig *config.Stack, envFile, secretsFile string, replicas int) error {
-	// Override de variáveis de ambiente
+	// Environment variables override
 	if envFile != "" {
-		c.output.Infof("📝 Aplicando variáveis de ambiente de: %s", envFile)
+		c.output.Infof("📝 Applying environment variables from: %s", envFile)
 		envVars, err := c.loadEnvFile(envFile)
 		if err != nil {
 			return fmt.Errorf("erro ao carregar env file: %w", err)
 		}
 
-		// Aplicar vars a todos os serviços
+		// Apply vars to all services
 		for i := range serviceConfig.Services {
 			if serviceConfig.Services[i].Env == nil {
 				serviceConfig.Services[i].Env = make(map[string]string)
@@ -195,15 +195,15 @@ func (c *deployServiceCommand) applyRuntimeOverrides(serviceConfig *config.Stack
 		}
 	}
 
-	// Override de secrets
+	// Secrets override
 	if secretsFile != "" {
-		c.output.Infof("🔐 Aplicando secrets de: %s", secretsFile)
-		// TODO: Implementar aplicação de secrets
+		c.output.Infof("🔐 Applying secrets from: %s", secretsFile)
+		// TODO: Implement secrets application
 	}
 
-	// Override de réplicas
+	// Replicas override
 	if replicas > 0 {
-		c.output.Infof("📈 Configurando %d réplicas", replicas)
+		c.output.Infof("📈 Setting %d replicas", replicas)
 		for i := range serviceConfig.Services {
 			serviceConfig.Services[i].Replicas = replicas
 		}
@@ -226,10 +226,10 @@ func (c *deployServiceCommand) mergeServiceWithBase(serviceConfig, baseConfig *c
 		// Merge networks
 		Networks: make(map[string]config.Network),
 
-		// Apenas volumes do serviço (base já está rodando)
+		// Only service volumes (base already running)
 		Volumes: serviceConfig.Volumes,
 
-		// Apenas serviços do microserviço (infraestrutura já rodando)
+		// Only microservice services (infrastructure already running)
 		Services: serviceConfig.Services,
 	}
 
@@ -245,9 +245,9 @@ func (c *deployServiceCommand) mergeServiceWithBase(serviceConfig, baseConfig *c
 }
 
 func (c *deployServiceCommand) deployMicroservice(ctx context.Context, config *config.Stack, serviceName string) error {
-	c.output.Info("🚢 Fazendo deploy do microserviço...")
+	c.output.Info("🚢 Deploying microservice...")
 
-	// Gerar compose apenas para o microserviço
+	// Generate compose only for microservice
 	options := compose.GenerateOptions{
 		DisableDozzle: true, // Já está rodando na base
 		DisableBeszel: true, // Já está rodando na base
@@ -258,7 +258,7 @@ func (c *deployServiceCommand) deployMicroservice(ctx context.Context, config *c
 		return err
 	}
 
-	// Criar diretório de deploy
+	// Create deploy directory
 	deployDir := filepath.Join(".services", serviceName, ".deploy")
 	if err := c.filesystem.MkdirAll(deployDir, 0755); err != nil {
 		return err
@@ -275,15 +275,15 @@ func (c *deployServiceCommand) deployMicroservice(ctx context.Context, config *c
 	// Deploy
 	deployOptions := docker.DeployOptions{
 		Build:  true,
-		Prune:  false, // Não fazer prune para não afetar outros serviços
+		Prune:  false, // Don't prune to avoid affecting other services
 		Detach: true,
 	}
 
 	if err := c.dockerService.Deploy(ctx, composePath, deployOptions); err != nil {
-		return fmt.Errorf("erro no deploy: %w", err)
+		return fmt.Errorf("deployment error: %w", err)
 	}
 
-	c.output.Infof("✅ Microserviço %s deployado com sucesso!", serviceName)
+	c.output.Infof("✅ Microservice %s deployed successfully!", serviceName)
 	c.output.Info("📊 Acesse os painéis:")
 	c.output.Infof("   • Logs: https://logs.%s", config.Domain)
 	c.output.Infof("   • Monitor: https://monitor.%s", config.Domain)
@@ -298,13 +298,13 @@ func (c *deployServiceCommand) loadEnvFile(envFile string) (map[string]string, e
 	}
 
 	envVars := make(map[string]string)
-	// TODO: Implementar parser de arquivo .env
+	// TODO: Implement .env file parser
 	// Por enquanto, assumir formato KEY=VALUE
 
 	return envVars, nil
 }
 
 func getTokenFromEnv(envVar string) string {
-	// TODO: Implementar leitura segura de variáveis de ambiente
+	// TODO: Implement secure environment variables reading
 	return ""
 }

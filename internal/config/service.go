@@ -114,7 +114,6 @@ func (m *manager) Create(ctx context.Context, path string, options CreateOptions
 				"APP_ENV":      "production",
 				"DATABASE_URL": "postgres://user:pass@db:5432/myapp",
 			},
-			EnvFile: []string{".env"},
 			Secrets: []Secret{
 				{
 					Name:   "db_password",

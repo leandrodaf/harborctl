@@ -267,6 +267,11 @@ func (c *initCommand) createProject(ctx context.Context, options config.CreateOp
 		return fmt.Errorf("error creating %s: %w", filename, err)
 	}
 
+	// Create deploy directory
+	if err := os.MkdirAll(".deploy", 0755); err != nil {
+		return fmt.Errorf("error creating .deploy directory: %w", err)
+	}
+
 	c.output.Info("✅ Project created successfully!")
 	c.output.Info(fmt.Sprintf("📄 Configuration file: %s", filename))
 	c.output.Info("")

@@ -11,7 +11,7 @@ import (
 	"github.com/leandrodaf/harborctl/pkg/fs"
 )
 
-// upCommand implementa o comando up
+// upCommand implements the up command
 type upCommand struct {
 	configManager  config.Manager
 	composeService compose.Service
@@ -20,7 +20,7 @@ type upCommand struct {
 	output         cli.Output
 }
 
-// NewUpCommand cria um novo comando up
+// NewUpCommand creates a new up command
 func NewUpCommand(
 	configManager config.Manager,
 	composeService compose.Service,
@@ -42,7 +42,7 @@ func (c *upCommand) Name() string {
 }
 
 func (c *upCommand) Description() string {
-	return "Gera compose e executa deploy (render + docker compose up -d --build + prune)"
+	return "Generate compose and deploy (render + docker compose up -d --build + prune)"
 }
 
 func (c *upCommand) Execute(ctx context.Context, args []string) error {
@@ -52,15 +52,15 @@ func (c *upCommand) Execute(ctx context.Context, args []string) error {
 	var noDozzle, noBeszel bool
 
 	fs.StringVar(&stackPath, "f", "stack.yml", "stack.yml")
-	fs.StringVar(&outputPath, "o", ".deploy/compose.generated.yml", "compose de saída")
-	fs.BoolVar(&noDozzle, "no-dozzle", false, "não incluir dozzle")
-	fs.BoolVar(&noBeszel, "no-beszel", false, "não incluir beszel")
+	fs.StringVar(&outputPath, "o", ".deploy/compose.generated.yml", "output compose file")
+	fs.BoolVar(&noDozzle, "no-dozzle", false, "don't include dozzle")
+	fs.BoolVar(&noBeszel, "no-beszel", false, "don't include beszel")
 
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	// Carregar e validar configuração
+	// Load and validate configuration
 	stack, err := c.configManager.Load(ctx, stackPath)
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (c *upCommand) Execute(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// Gerar compose
+	// Generate compose
 	options := compose.GenerateOptions{
 		DisableDozzle: noDozzle,
 		DisableBeszel: noBeszel,
@@ -81,17 +81,17 @@ func (c *upCommand) Execute(ctx context.Context, args []string) error {
 		return err
 	}
 
-	// Criar diretório se não existir
+	// Create directory if it doesn't exist
 	if err := c.filesystem.MkdirAll(".deploy", 0755); err != nil {
 		return err
 	}
 
-	// Escrever arquivo
+	// Write file
 	if err := c.filesystem.WriteFile(outputPath, data, 0644); err != nil {
 		return err
 	}
 
-	c.output.Infof("compose gerado em %s", outputPath)
+	c.output.Infof("compose generated at %s", outputPath)
 
 	// Deploy
 	deployOptions := docker.DeployOptions{

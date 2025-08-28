@@ -11,13 +11,13 @@ import (
 	"github.com/leandrodaf/harborctl/pkg/docker"
 )
 
-// statusCommand implementa o comando status
+// statusCommand implements the status command
 type statusCommand struct {
 	dockerService docker.Service
 	output        cli.Output
 }
 
-// NewStatusCommand cria um novo comando status
+// NewStatusCommand creates a new status command
 func NewStatusCommand(dockerService docker.Service, output cli.Output) cli.Command {
 	return &statusCommand{
 		dockerService: dockerService,
@@ -30,7 +30,7 @@ func (c *statusCommand) Name() string {
 }
 
 func (c *statusCommand) Description() string {
-	return "Mostra o status dos serviços"
+	return "Show services status"
 }
 
 func (c *statusCommand) Execute(ctx context.Context, args []string) error {
@@ -38,19 +38,19 @@ func (c *statusCommand) Execute(ctx context.Context, args []string) error {
 
 	var composePath string
 	var verbose bool
-	fs.StringVar(&composePath, "f", ".deploy/compose.generated.yml", "arquivo compose")
-	fs.BoolVar(&verbose, "verbose", false, "mostrar status detalhado")
+	fs.StringVar(&composePath, "f", ".deploy/compose.generated.yml", "compose file")
+	fs.BoolVar(&verbose, "verbose", false, "show detailed status")
 
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
-	c.output.Info("🔍 Status dos serviços:")
+	c.output.Info("🔍 Services status:")
 
-	// Verificar se o arquivo compose existe
+	// Check if compose file exists
 	if !fileExistsStatus(composePath) {
-		c.output.Errorf("❌ Arquivo compose não encontrado: %s", composePath)
-		c.output.Info("💡 Execute 'harborctl up -f server-base.yml' para criar a infraestrutura")
+		c.output.Errorf("❌ Compose file not found: %s", composePath)
+		c.output.Info("💡 Run 'harborctl up -f server-base.yml' to create infrastructure")
 		return fmt.Errorf("compose file not found: %s", composePath)
 	}
 
@@ -60,27 +60,27 @@ func (c *statusCommand) Execute(ctx context.Context, args []string) error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		c.output.Error("❌ Erro ao verificar status dos containers")
+		c.output.Error("❌ Error checking container status")
 		return fmt.Errorf("failed to get container status: %w", err)
 	}
 
 	if verbose {
-		c.output.Info("\n🔍 Status detalhado:")
+		c.output.Info("\n🔍 Detailed status:")
 
-		// Mostrar estatísticas de recursos
-		c.output.Info("\n📊 Uso de recursos:")
+		// Show resource statistics
+		c.output.Info("\n📊 Resource usage:")
 		statsCmd := exec.CommandContext(ctx, "docker", "stats", "--no-stream", "--format",
 			"table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}")
 		statsCmd.Stdout = os.Stdout
 		statsCmd.Run()
 
-		// Mostrar redes
-		c.output.Info("\n🌐 Redes:")
+		// Show networks
+		c.output.Info("\n🌐 Networks:")
 		netCmd := exec.CommandContext(ctx, "docker", "network", "ls", "--filter", "name=deploy")
 		netCmd.Stdout = os.Stdout
 		netCmd.Run()
 
-		// Mostrar volumes
+		// Show volumes
 		c.output.Info("\n💾 Volumes:")
 		volCmd := exec.CommandContext(ctx, "docker", "volume", "ls", "--filter", "name=deploy")
 		volCmd.Stdout = os.Stdout
