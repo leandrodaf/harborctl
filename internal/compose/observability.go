@@ -171,8 +171,8 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		"LISTEN": "/beszel_socket/beszel.sock", // Usar socket Unix para comunicação local
 	}
 
-	// Configurar HUB_URL - usar nome do container Docker
-	agentEnvironment["HUB_URL"] = "http://beszel-hub:8090"
+	// NOTA: Quando usando LISTEN com socket Unix, NÃO definir HUB_URL
+	// O agent usará apenas o socket Unix para comunicação com o hub
 
 	// Configurar token se fornecido
 	if observability.Beszel.Token != "" {
@@ -191,10 +191,7 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		agentEnvironment["KEY"] = "CONFIGURE_HUB_KEY_IN_BESZEL_CONFIG"
 	}
 
-	// Configurar HUB_URL personalizada se fornecida
-	if observability.Beszel.HubURL != "" {
-		agentEnvironment["HUB_URL"] = observability.Beszel.HubURL
-	}
+	// HUB_URL não é usado quando LISTEN está configurado para socket Unix
 
 	agentVolumes := []string{
 		fmt.Sprintf("%s:/var/run/docker.sock:ro", dockerSocket),
@@ -212,7 +209,7 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		"restart":        "unless-stopped",
 		"user":           "0", // Executar como root para acessar Docker socket
 		"privileged":     false,
-		"security_opt":   []string{"no-new-privileges:true"},
+		"security_opt":   []string{"no-new-privileges:true", "apparmor:unconfined"},
 		// Removido "pid": "host" para evitar conflito com AppArmor
 		// O agent ainda consegue coletar a maioria das estatísticas via /proc e /sys
 	}
