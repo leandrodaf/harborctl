@@ -98,12 +98,22 @@ func (c *initServerCommand) createBaseServerConfig(domain, email, project string
 				Enabled:    true,
 				Subdomain:  "logs",
 				DataVolume: "dozzle_data",
+				BasicAuth: &config.BasicAuth{
+					Enabled:  true,
+					Username: "admin",
+					Password: "$2a$10$rO7V2T9JhgHGGkYJlVzZJu.HKVzZqO5qJ5MF5KsGzOzVzSjI2tG6W", // "admin"
+				},
 			},
 			Beszel: config.Beszel{
 				Enabled:      true,
 				Subdomain:    "monitor",
 				DataVolume:   "beszel_data",
 				SocketVolume: "beszel_socket",
+				BasicAuth: &config.BasicAuth{
+					Enabled:  true,
+					Username: "admin",
+					Password: "$2a$10$rO7V2T9JhgHGGkYJlVzZJu.HKVzZqO5qJ5MF5KsGzOzVzSjI2tG6W", // "admin"
+				},
 			},
 		},
 		Networks: map[string]config.Network{

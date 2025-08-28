@@ -104,6 +104,12 @@ func registerCommands(
 	// Register init-server command
 	runner.Register(commands.NewInitServerCommand(configManager, output))
 
+	// Register setup command (interactive)
+	runner.Register(commands.NewSetupCommand(configManager, output))
+
+	// Register edit-server command (interactive)
+	runner.Register(commands.NewEditServerCommand(configManager, output))
+
 	// Register deploy-service command
 	runner.Register(commands.NewDeployServiceCommand(configManager, composeService, dockerService, filesystem, output))
 
@@ -166,6 +172,8 @@ func showHelp(output cli.Output) {
 	output.Info("  harborctl [command] [flags]")
 	output.Info("")
 	output.Info("COMMANDS:")
+	output.Info("  setup             🆕 Interactive server setup wizard (recommended)")
+	output.Info("  edit-server       🔧 Edit existing server configuration")
 	output.Info("  init              Initialize new project configuration")
 	output.Info("  init-server       Initialize server with required dependencies")
 	output.Info("  deploy-service    Deploy a service to the stack")

@@ -28,7 +28,7 @@ type TraefikBuilder interface {
 
 // ObservabilityBuilder constrói serviços de observabilidade
 type ObservabilityBuilder interface {
-	Build(ctx context.Context, observability config.Observability, domain string, env Environment, options GenerateOptions, project string) map[string]map[string]any
+	Build(ctx context.Context, observability config.Observability, domain string, env Environment, options GenerateOptions, project string, tls config.TLS) map[string]map[string]any
 }
 
 // HealthChecker define estratégias de health check

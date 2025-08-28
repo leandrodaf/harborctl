@@ -374,23 +374,26 @@ type DNSChallenge struct {
 
 // Observability configura monitoramento
 type Observability struct {
-	Dozzle Dozzle `yaml:"dozzle"`
-	Beszel Beszel `yaml:"beszel"`
+	Dozzle       Dozzle `yaml:"dozzle"`
+	Beszel       Beszel `yaml:"beszel"`
+	DockerSocket string `yaml:"docker_socket,omitempty"` // Path customizado do Docker socket
 }
 
 // Dozzle configura logs
 type Dozzle struct {
-	Enabled    bool   `yaml:"enabled"`
-	Subdomain  string `yaml:"subdomain"`
-	DataVolume string `yaml:"data_volume"`
+	Enabled    bool       `yaml:"enabled"`
+	Subdomain  string     `yaml:"subdomain"`
+	DataVolume string     `yaml:"data_volume"`
+	BasicAuth  *BasicAuth `yaml:"basic_auth,omitempty"`
 }
 
 // Beszel configura monitoramento
 type Beszel struct {
-	Enabled      bool   `yaml:"enabled"`
-	Subdomain    string `yaml:"subdomain"`
-	DataVolume   string `yaml:"data_volume"`
-	SocketVolume string `yaml:"socket_volume"`
+	Enabled      bool       `yaml:"enabled"`
+	Subdomain    string     `yaml:"subdomain"`
+	DataVolume   string     `yaml:"data_volume"`
+	SocketVolume string     `yaml:"socket_volume"`
+	BasicAuth    *BasicAuth `yaml:"basic_auth,omitempty"`
 }
 
 // Network representa uma network Docker

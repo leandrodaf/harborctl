@@ -110,8 +110,6 @@ harborctl scale       # Scale services
 
 ### 🚀 Remote Commands
 ```bash
-### 🚀 Remote Commands
-```bash
 # Deploy microservice
 harborctl deploy-service 
   --host server.com 
@@ -194,91 +192,6 @@ Release is automated via GitHub Actions:
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-## 🆘 Support
-
-- 📖 [Complete Documentation](docs/)
-- 🐛 [Report Bugs](https://github.com/leandrodaf/harborctl/issues)
-- 💡 [Request Features](https://github.com/leandrodaf/harborctl/issues/new)
-
----
-
-<div align="center">
-  <strong>🚢 HarborCtl - Simplifying microservice deployments</strong>
-</div>
-```
-
-## 🎨 Templates Disponíveis
-
-### 📁 Microserviços
-```bash
-# Criar microserviço Node.js
-harborctl init --name minha-api --type node
-
-# Criar microserviço Python
-harborctl init --name minha-api --type python --template fastapi
-
-# Criar microserviço Go
-harborctl init --name minha-api --type go
-```
-
-### ⚙️ GitHub Actions
-Os templates de GitHub Actions estão em `templates/github-actions/`:
-
-- **deploy.yml**: Pipeline completo de CI/CD
-- **auto-scale.yml**: Monitoramento e auto-scaling
-
-#### Como usar nos microserviços:
-```bash
-# Copiar template para seu microserviço
-cp templates/github-actions/deploy.yml .github/workflows/
-
-# Personalizar variáveis no arquivo
-# Configurar secrets no GitHub:
-# - PRODUCTION_HOST
-# - PRODUCTION_USER  
-# - PRODUCTION_SSH_KEY
-```
-
-## 🔧 Automation Scripts
-
-| Script | Description |
-|--------|-----------|
-| `scripts/install.sh` | Automatic HarborCtl installation |
-| `scripts/setup-production-server.sh` | Production server configuration |
-| `scripts/create-microservice.sh` | Complete microservice creation |
-
-## 🏗️ Development
-
-### Requirements
-- Go 1.24+
-- Docker
-- Docker Compose
-
-### Local Build
-```bash
-# Clone the repository
-git clone https://github.com/leandrodaf/harborctl.git
-cd harborctl
-
-# Build
-go build -o harborctl ./cmd/harborctl
-
-# Tests
-go test ./...
-```
-
-### Release
-O release é automatizado via GitHub Actions:
-1. Crie uma tag: `git tag v1.2.0`
-2. Push da tag: `git push origin v1.2.0`
-3. GitHub Actions gera binários para todas as plataformas
-
-## 📄 Licença
-
-MIT License - veja [LICENSE](LICENSE) para detalhes.
 
 ---
 

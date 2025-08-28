@@ -12,19 +12,22 @@ import (
 	"github.com/leandrodaf/harborctl/pkg/docker"
 	"github.com/leandrodaf/harborctl/pkg/fs"
 	"github.com/leandrodaf/harborctl/pkg/git"
+	"github.com/leandrodaf/harborctl/pkg/prompt"
 )
 
-// deployServiceCommand implementa deploy isolado de microserviços
+// deployServiceCommand implements isolated microservice deployment
 type deployServiceCommand struct {
 	configManager  config.Manager
 	composeService compose.Service
 	dockerService  docker.Service
 	filesystem     fs.FileSystem
 	gitClient      *git.Client
+	prompter       prompt.Prompter
+	errorHandler   *prompt.ErrorHandler
 	output         cli.Output
 }
 
-// NewDeployServiceCommand cria um novo comando deploy-service
+// NewDeployServiceCommand creates a new enhanced deploy-service command
 func NewDeployServiceCommand(
 	configManager config.Manager,
 	composeService compose.Service,
@@ -32,12 +35,15 @@ func NewDeployServiceCommand(
 	filesystem fs.FileSystem,
 	output cli.Output,
 ) cli.Command {
+	prompter := prompt.NewPrompter()
 	return &deployServiceCommand{
 		configManager:  configManager,
 		composeService: composeService,
 		dockerService:  dockerService,
 		filesystem:     filesystem,
 		gitClient:      git.NewClient(),
+		prompter:       prompter,
+		errorHandler:   prompt.NewErrorHandler(prompter),
 		output:         output,
 	}
 }
@@ -47,7 +53,7 @@ func (c *deployServiceCommand) Name() string {
 }
 
 func (c *deployServiceCommand) Description() string {
-	return "Deploy isolado de um microserviço específico"
+	return "Deploy a specific microservice with interactive or direct options"
 }
 
 func (c *deployServiceCommand) Execute(ctx context.Context, args []string) error {

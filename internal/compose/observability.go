@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/leandrodaf/harborctl/internal/config"
 )
@@ -16,17 +17,17 @@ func NewObservabilityBuilder() ObservabilityBuilder {
 }
 
 // Build constrói serviços de observabilidade
-func (o *ObservabilityBuilderImpl) Build(ctx context.Context, observability config.Observability, domain string, env Environment, options GenerateOptions, project string) map[string]map[string]any {
+func (o *ObservabilityBuilderImpl) Build(ctx context.Context, observability config.Observability, domain string, env Environment, options GenerateOptions, project string, tls config.TLS) map[string]map[string]any {
 	services := make(map[string]map[string]any)
 
 	// Dozzle (log viewer)
 	if !options.DisableDozzle && observability.Dozzle.Enabled {
-		services["dozzle"] = o.buildDozzle(observability, domain, env, project)
+		services["dozzle"] = o.buildDozzle(observability, domain, env, project, tls)
 	}
 
 	// Beszel (monitoring)
 	if !options.DisableBeszel && observability.Beszel.Enabled {
-		hub, agent := o.buildBeszel(observability, domain, env, project)
+		hub, agent := o.buildBeszel(observability, domain, env, project, tls)
 		services["beszel-hub"] = hub
 		services["beszel-agent"] = agent
 	}
@@ -35,10 +36,16 @@ func (o *ObservabilityBuilderImpl) Build(ctx context.Context, observability conf
 }
 
 // buildDozzle constrói o serviço Dozzle
-func (o *ObservabilityBuilderImpl) buildDozzle(observability config.Observability, domain string, env Environment, project string) map[string]any {
+func (o *ObservabilityBuilderImpl) buildDozzle(observability config.Observability, domain string, env Environment, project string, tls config.TLS) map[string]any {
 	var entrypoint string
 	var subdomain string
 	var labels map[string]string
+
+	// Determinar Docker socket path
+	dockerSocket := "/var/run/docker.sock"
+	if observability.DockerSocket != "" {
+		dockerSocket = observability.DockerSocket
+	}
 
 	if env.IsLocalhost() {
 		// Configuração para desenvolvimento local
@@ -66,15 +73,22 @@ func (o *ObservabilityBuilderImpl) buildDozzle(observability config.Observabilit
 			"traefik.http.routers.dozzle.rule":                      fmt.Sprintf("Host(`%s`)", subdomain),
 			"traefik.http.routers.dozzle.entrypoints":               entrypoint,
 			"traefik.http.routers.dozzle.tls":                       "true",
-			"traefik.http.routers.dozzle.tls.certresolver":          "letsencrypt",
+			"traefik.http.routers.dozzle.tls.certresolver":          tls.Resolver,
 		}
+	}
+
+	// Adicionar basic auth se configurado
+	if observability.Dozzle.BasicAuth != nil && observability.Dozzle.BasicAuth.Enabled {
+		middlewareName := "dozzle-auth"
+		labels[fmt.Sprintf("traefik.http.routers.dozzle.middlewares")] = middlewareName
+		labels[fmt.Sprintf("traefik.http.middlewares.%s.basicauth.users", middlewareName)] = o.buildBasicAuthUsers(observability.Dozzle.BasicAuth)
 	}
 
 	service := map[string]any{
 		"image":          "amir20/dozzle:latest",
 		"container_name": "dozzle",
 		"volumes": []string{
-			"/var/run/docker.sock:/var/run/docker.sock:ro",
+			fmt.Sprintf("%s:/var/run/docker.sock:ro", dockerSocket),
 			observability.Dozzle.DataVolume + ":/data",
 		},
 		"environment": map[string]string{
@@ -90,10 +104,16 @@ func (o *ObservabilityBuilderImpl) buildDozzle(observability config.Observabilit
 }
 
 // buildBeszel constrói os serviços Beszel
-func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observability, domain string, env Environment, project string) (hub, agent map[string]any) {
+func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observability, domain string, env Environment, project string, tls config.TLS) (hub, agent map[string]any) {
 	var entrypoint string
 	var subdomain string
 	var hubLabels map[string]string
+
+	// Determinar Docker socket path
+	dockerSocket := "/var/run/docker.sock"
+	if observability.DockerSocket != "" {
+		dockerSocket = observability.DockerSocket
+	}
 
 	if env.IsLocalhost() {
 		// Configuração para desenvolvimento local
@@ -121,8 +141,15 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 			"traefik.http.routers.beszel-hub.rule":                      fmt.Sprintf("Host(`%s`)", subdomain),
 			"traefik.http.routers.beszel-hub.entrypoints":               entrypoint,
 			"traefik.http.routers.beszel-hub.tls":                       "true",
-			"traefik.http.routers.beszel-hub.tls.certresolver":          "letsencrypt",
+			"traefik.http.routers.beszel-hub.tls.certresolver":          tls.Resolver,
 		}
+	}
+
+	// Adicionar basic auth se configurado
+	if observability.Beszel.BasicAuth != nil && observability.Beszel.BasicAuth.Enabled {
+		middlewareName := "beszel-auth"
+		hubLabels[fmt.Sprintf("traefik.http.routers.beszel-hub.middlewares")] = middlewareName
+		hubLabels[fmt.Sprintf("traefik.http.middlewares.%s.basicauth.users", middlewareName)] = o.buildBasicAuthUsers(observability.Beszel.BasicAuth)
 	}
 
 	// Beszel Hub
@@ -140,19 +167,40 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		"labels":   hubLabels,
 	}
 
-	// Beszel Agent
+	// Beszel Agent - configuração melhorada para conectividade Docker
 	agent = map[string]any{
 		"image":          "henrygd/beszel-agent:latest",
 		"container_name": "beszel-agent",
 		"environment": map[string]string{
-			"PORT": "45876",
+			"PORT":        "45876",
+			"DOCKER_HOST": "unix:///var/run/docker.sock", // Garantir que usa o socket correto
 		},
 		"volumes": []string{
-			"/var/run/docker.sock:/var/run/docker.sock:ro",
+			fmt.Sprintf("%s:/var/run/docker.sock:ro", dockerSocket),
 		},
-		"networks": []string{"private", "traefik"},
-		"restart":  "unless-stopped",
+		"networks":     []string{"private"},
+		"restart":      "unless-stopped",
+		"user":         "0", // Executar como root para acessar Docker socket
+		"privileged":   false,
+		"security_opt": []string{"no-new-privileges:true"},
 	}
 
 	return hub, agent
+}
+
+// buildBasicAuthUsers constrói a string de usuários para basic auth
+func (o *ObservabilityBuilderImpl) buildBasicAuthUsers(auth *config.BasicAuth) string {
+	var users []string
+
+	// Usuário único (legacy)
+	if auth.Username != "" && auth.Password != "" {
+		users = append(users, fmt.Sprintf("%s:%s", auth.Username, auth.Password))
+	}
+
+	// Múltiplos usuários
+	for username, password := range auth.Users {
+		users = append(users, fmt.Sprintf("%s:%s", username, password))
+	}
+
+	return strings.Join(users, ",")
 }

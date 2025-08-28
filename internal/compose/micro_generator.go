@@ -68,7 +68,7 @@ func (g *GeneratorImpl) Generate(ctx context.Context, stack *config.Stack, optio
 
 	// Observability
 	if !options.DisableDozzle || !options.DisableBeszel {
-		observabilityServices := g.observabilityBuilder.Build(ctx, stack.Observability, stack.Domain, env, options, stack.Project)
+		observabilityServices := g.observabilityBuilder.Build(ctx, stack.Observability, stack.Domain, env, options, stack.Project, stack.TLS)
 		for name, service := range observabilityServices {
 			compose.Services[name] = service
 		}
