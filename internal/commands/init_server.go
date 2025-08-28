@@ -61,7 +61,7 @@ func (c *initServerCommand) Execute(ctx context.Context, args []string) error {
 	if err := prompt.ValidateDomain(domain); err != nil {
 		return fmt.Errorf("invalid domain: %w", err)
 	}
-	
+
 	if err := prompt.ValidateEmail(email); err != nil {
 		return fmt.Errorf("invalid email: %w", err)
 	}
