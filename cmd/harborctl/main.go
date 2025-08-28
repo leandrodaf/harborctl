@@ -12,7 +12,11 @@ import (
 	"github.com/leandrodaf/harborctl/pkg/fs"
 )
 
-const version = "1.0.0"
+var (
+	version   = "dev"
+	buildTime = "unknown"
+	gitCommit = "unknown"
+)
 
 func main() {
 	ctx := context.Background()
@@ -23,6 +27,8 @@ func main() {
 	// Handle version flag
 	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
 		output.Infof("harborctl version %s", version)
+		output.Infof("Built: %s", buildTime)
+		output.Infof("Commit: %s", gitCommit)
 		return
 	}
 

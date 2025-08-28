@@ -111,7 +111,14 @@ jobs:
           set -euo pipefail
           mkdir -p build dist
           OUT="build/${{ env.BINARY_NAME }}${{ matrix.ext }}"
-          go build -trimpath -ldflags="-s -w" -o "$OUT" ./cmd/harborctl
+          
+          # Build info for ldflags
+          BUILD_TIME=$(date -u '+%Y-%m-%d_%H:%M:%S')
+          GIT_COMMIT=$(git rev-parse HEAD)
+          VERSION_INFO="${GITHUB_REF_NAME}"
+          
+          # Build with version information
+          go build -trimpath -ldflags="-s -w -X main.version=${VERSION_INFO} -X main.buildTime=${BUILD_TIME} -X main.gitCommit=${GIT_COMMIT}" -o "$OUT" ./cmd/harborctl
 
       - name: Package artifact
         shell: bash
@@ -173,9 +180,13 @@ jobs:
             if [[ "$binary" == *"amd64"* ]]; then
               echo "Copying amd64 binary"
               cp "$binary" "${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64"
+              # Create latest alias for updates
+              cp "$binary" "${{ env.BINARY_NAME }}_latest_linux_amd64"
             elif [[ "$binary" == *"arm64"* ]]; then
               echo "Copying arm64 binary"
               cp "$binary" "${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64"
+              # Create latest alias for updates
+              cp "$binary" "${{ env.BINARY_NAME }}_latest_linux_arm64"
             fi
           done
           
@@ -208,6 +219,8 @@ jobs:
             dist/*.zip
             dist/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_amd64
             dist/${{ env.BINARY_NAME }}_${{ github.ref_name }}_linux_arm64
+            dist/${{ env.BINARY_NAME }}_latest_linux_amd64
+            dist/${{ env.BINARY_NAME }}_latest_linux_arm64
             dist/checksums.txt
           body: |
             ## Harbor CLI ${{ github.ref_name }}
@@ -275,6 +288,23 @@ jobs:
 
             #### For Scripts and Automation
 
+            **Automated Installation Script (Recommended)**
+
+            Use our comprehensive installation script for the best experience:
+            ```bash
+            # Install latest version with automatic architecture detection
+            curl -sSLf https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-harborctl.sh | bash
+
+            # Or with wget
+            wget -qO- https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-harborctl.sh | bash
+
+            # Install specific version
+            curl -sSLf https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-harborctl.sh | bash -s -- --version ${{ github.ref_name }}
+
+            # Force reinstall
+            curl -sSLf https://raw.githubusercontent.com/${{ github.repository }}/main/scripts/install-harborctl.sh | bash -s -- --force
+            ```
+
             **Direct binary download (no decompression needed):**
             ```bash
             # Auto-detect architecture and download direct binary
@@ -316,7 +346,99 @@ jobs:
             sha256sum -c checksums.txt --ignore-missing
             ```
 
-            ### 🗑️ Uninstallation
+            ### � Update/Upgrade
+
+            #### Update to Latest Version
+            To update to the latest version, simply run the installation command again:
+            ```bash
+            # Auto-detect and update
+            ARCH=$(uname -m)
+            case $ARCH in
+                x86_64) ARCH="amd64" ;;
+                aarch64|arm64) ARCH="arm64" ;;
+                *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
+            esac
+            
+            sudo curl -sSLf "https://github.com/${{ github.repository }}/releases/latest/download/${{ env.BINARY_NAME }}_latest_linux_${ARCH}" -o /usr/local/bin/${{ env.BINARY_NAME }} && sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
+            ```
+
+            #### Force Update (Overwrite)
+            If you need to force an update or reinstall:
+            ```bash
+            # Remove current version first
+            sudo rm -f /usr/local/bin/${{ env.BINARY_NAME }}
+            
+            # Install latest version
+            ARCH=$(uname -m)
+            case $ARCH in
+                x86_64) ARCH="amd64" ;;
+                aarch64|arm64) ARCH="arm64" ;;
+                *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
+            esac
+            
+            sudo curl -sSLf "https://github.com/${{ github.repository }}/releases/latest/download/${{ env.BINARY_NAME }}_latest_linux_${ARCH}" -o /usr/local/bin/${{ env.BINARY_NAME }} && sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
+            ```
+
+            #### Update Script (One-liner)
+            Create an update script for easy updates:
+            ```bash
+            # Create update script
+            cat > update-harborctl.sh << 'EOF'
+            #!/bin/bash
+            set -euo pipefail
+
+            echo "🔄 Updating HarborCtl..."
+
+            # Check current version
+            if command -v ${{ env.BINARY_NAME }} >/dev/null 2>&1; then
+                echo "📋 Current version: $(${{ env.BINARY_NAME }} --version 2>/dev/null || echo 'unknown')"
+            else
+                echo "📋 HarborCtl not found, installing..."
+            fi
+
+            # Detect architecture
+            ARCH=$(uname -m)
+            case $ARCH in
+                x86_64) ARCH="amd64" ;;
+                aarch64|arm64) ARCH="arm64" ;;
+                *) echo "❌ Unsupported architecture: $ARCH" && exit 1 ;;
+            esac
+
+            echo "🏗️  Architecture detected: $ARCH"
+
+            # Download and install
+            echo "⬇️  Downloading latest version..."
+            sudo curl -sSLf "https://github.com/${{ github.repository }}/releases/latest/download/${{ env.BINARY_NAME }}_latest_linux_${ARCH}" -o /usr/local/bin/${{ env.BINARY_NAME }}
+            sudo chmod +x /usr/local/bin/${{ env.BINARY_NAME }}
+
+            echo "✅ Update completed!"
+            echo "📋 New version: $(${{ env.BINARY_NAME }} --version)"
+            EOF
+
+            chmod +x update-harborctl.sh
+            ./update-harborctl.sh
+            ```
+
+            #### Check for Updates
+            To check if there's a new version available:
+            ```bash
+            # Get current version
+            CURRENT_VERSION=$(${{ env.BINARY_NAME }} --version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+
+            # Get latest version from GitHub
+            LATEST_VERSION=$(curl -sSLf https://api.github.com/repos/${{ github.repository }}/releases/latest | grep -oE '"tag_name": "v[0-9]+\.[0-9]+\.[0-9]+"' | cut -d'"' -f4)
+
+            echo "Current version: $CURRENT_VERSION"
+            echo "Latest version:  $LATEST_VERSION"
+
+            if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+                echo "🔄 Update available!"
+            else
+                echo "✅ You have the latest version"
+            fi
+            ```
+
+            ### �🗑️ Uninstallation
 
             To remove HarborCtl:
             ```bash

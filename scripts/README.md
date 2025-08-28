@@ -4,15 +4,50 @@ Automation scripts to facilitate the use of HarborCtl.
 
 ## 📦 Available Scripts
 
+# HarborCtl Scripts
+
+Automation scripts to facilitate the use of HarborCtl.
+
+## � Available Scripts
+
+### �🔧 install-harborctl.sh
+**Advanced HarborCtl installer with update capabilities.**
+
+Features:
+- ✅ Automatic architecture detection (amd64/arm64)
+- ✅ Latest version installation
+- ✅ Specific version installation
+- ✅ Force reinstallation
+- ✅ Update existing installation
+- ✅ Comprehensive error handling
+- ✅ Dependency checking
+
+```bash
+# Quick installation (latest version)
+curl -sSLf https://raw.githubusercontent.com/leandrodaf/harborctl/main/scripts/install-harborctl.sh | bash
+
+# Or using wget
+wget -qO- https://raw.githubusercontent.com/leandrodaf/harborctl/main/scripts/install-harborctl.sh | bash
+
+# Download and run with options
+wget https://raw.githubusercontent.com/leandrodaf/harborctl/main/scripts/install-harborctl.sh
+chmod +x install-harborctl.sh
+
+# Install latest version
+./install-harborctl.sh
+
+# Force reinstall
+./install-harborctl.sh --force
+
+# Install specific version
+./install-harborctl.sh --version v1.2.0
+
+# Show help
+./install-harborctl.sh --help
+```
+
 ### 🔧 install.sh
-Automatic HarborCtl installer.s do Harbor CLI
-
-Scripts de automação para facilitar o uso do Harbor CLI.
-
-## 📂 Scripts Disponíveis
-
-### 🚀 install.sh
-Instalador automático do Harbor CLI.
+Basic HarborCtl installer (legacy).
 
 ```bash
 # Automatic installation
