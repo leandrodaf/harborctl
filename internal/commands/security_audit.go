@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/leandrodaf/harborctl/internal/config"
 	"github.com/leandrodaf/harborctl/pkg/cli"
@@ -97,16 +99,59 @@ func (c *securityAuditCommand) auditLocalConfig(ctx context.Context, stackPath s
 }
 
 func (c *securityAuditCommand) auditRepositories(ctx context.Context, repoConfigPath string) error {
-	c.output.Info("🔍 Auditando configuração de repositórios...")
+	c.output.Info("🔍 Auditing repository configuration...")
 
-	// TODO: Implementar auditoria de repositórios
-	// 1. Validar URLs dos repositórios
-	// 2. Verificar tokens de acesso
-	// 3. Validar configurações de segurança
-	// 4. Verificar dependências
+	// Check if repo config file exists
+	if _, err := os.Stat(repoConfigPath); os.IsNotExist(err) {
+		c.output.Info("⚠️  Repository config file not found, skipping repository audit")
+		return nil
+	}
 
-	c.output.Info("✅ Repositórios aprovados na auditoria")
+	// Basic repository security checks
+	issues := c.checkRepositorySecurityIssues(repoConfigPath)
+
+	if len(issues) > 0 {
+		c.output.Info("⚠️  Repository security issues found:")
+		for _, issue := range issues {
+			c.output.Info(fmt.Sprintf("   • %s", issue))
+		}
+	} else {
+		c.output.Info("✅ Repository configuration passed security audit")
+	}
+
 	return nil
+}
+
+func (c *securityAuditCommand) checkRepositorySecurityIssues(repoConfigPath string) []string {
+	var issues []string
+
+	// Basic validation checks
+	content, err := os.ReadFile(repoConfigPath)
+	if err != nil {
+		issues = append(issues, fmt.Sprintf("Cannot read repo config: %v", err))
+		return issues
+	}
+
+	configStr := string(content)
+
+	// Check for insecure protocols
+	if strings.Contains(configStr, "http://") {
+		issues = append(issues, "Insecure HTTP URLs found in repository config")
+	}
+
+	// Check for hardcoded tokens (basic patterns)
+	suspiciousPatterns := []string{
+		"token=", "password=", "secret=", "key=",
+		"ghp_", "gho_", "ghu_", "ghs_", // GitHub tokens
+	}
+
+	for _, pattern := range suspiciousPatterns {
+		if strings.Contains(strings.ToLower(configStr), pattern) {
+			issues = append(issues, fmt.Sprintf("Potential hardcoded credential detected: %s", pattern))
+		}
+	}
+
+	return issues
 }
 
 func (c *securityAuditCommand) checkSecurityIssues(stack *config.Stack) []string {

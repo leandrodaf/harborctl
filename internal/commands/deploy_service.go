@@ -4,7 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/leandrodaf/harborctl/internal/compose"
 	"github.com/leandrodaf/harborctl/internal/config"
@@ -198,7 +200,9 @@ func (c *deployServiceCommand) applyRuntimeOverrides(serviceConfig *config.Stack
 	// Secrets override
 	if secretsFile != "" {
 		c.output.Infof("🔐 Applying secrets from: %s", secretsFile)
-		// TODO: Implement secrets application
+		if err := c.applySecretsFile(serviceConfig, secretsFile); err != nil {
+			return fmt.Errorf("error applying secrets: %w", err)
+		}
 	}
 
 	// Replicas override
@@ -292,19 +296,94 @@ func (c *deployServiceCommand) deployMicroservice(ctx context.Context, config *c
 }
 
 func (c *deployServiceCommand) loadEnvFile(envFile string) (map[string]string, error) {
-	_, err := c.filesystem.ReadFile(envFile)
+	content, err := c.filesystem.ReadFile(envFile)
 	if err != nil {
 		return nil, err
 	}
 
 	envVars := make(map[string]string)
-	// TODO: Implement .env file parser
-	// Por enquanto, assumir formato KEY=VALUE
+	lines := strings.Split(string(content), "\n")
+
+	for lineNum, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Parse KEY=VALUE format
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			c.output.Infof("⚠️ Invalid env format at line %d: %s", lineNum+1, line)
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		// Remove quotes if present
+		if (strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"")) ||
+			(strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'")) {
+			value = value[1 : len(value)-1]
+		}
+
+		envVars[key] = value
+	}
 
 	return envVars, nil
 }
 
+func (c *deployServiceCommand) applySecretsFile(serviceConfig *config.Stack, secretsFile string) error {
+	content, err := c.filesystem.ReadFile(secretsFile)
+	if err != nil {
+		return fmt.Errorf("failed to read secrets file: %w", err)
+	}
+
+	secretsVars := make(map[string]string)
+	lines := strings.Split(string(content), "\n")
+
+	for lineNum, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Parse KEY=VALUE format
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			c.output.Infof("⚠️ Invalid secrets format at line %d: %s", lineNum+1, line)
+			continue
+		}
+
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+
+		// Remove quotes if present
+		if (strings.HasPrefix(value, "\"") && strings.HasSuffix(value, "\"")) ||
+			(strings.HasPrefix(value, "'") && strings.HasSuffix(value, "'")) {
+			value = value[1 : len(value)-1]
+		}
+
+		secretsVars[key] = value
+	}
+
+	// Apply secrets to all services as environment variables
+	for i := range serviceConfig.Services {
+		if serviceConfig.Services[i].Env == nil {
+			serviceConfig.Services[i].Env = make(map[string]string)
+		}
+		for key, value := range secretsVars {
+			serviceConfig.Services[i].Env[key] = value
+		}
+	}
+
+	return nil
+}
+
 func getTokenFromEnv(envVar string) string {
-	// TODO: Implement secure environment variables reading
-	return ""
+	// Read environment variable securely
+	return os.Getenv(envVar)
 }

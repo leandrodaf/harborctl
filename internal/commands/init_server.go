@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/leandrodaf/harborctl/internal/config"
 	"github.com/leandrodaf/harborctl/pkg/cli"
@@ -146,6 +147,12 @@ func (c *initServerCommand) createBaseServerConfig(domain, email, project string
 }
 
 func fileExists(path string) (bool, error) {
-	// TODO: Implementar verificação de arquivo real
-	return false, nil
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }

@@ -493,8 +493,6 @@ func (s *Service) GetTraefik() *ServiceTraefik {
 			}
 		}
 
-		// TODO: Adicionar parsing para outras configurações (TLS, LoadBalancer, etc.)
-
 		return traefik
 	case *ServiceTraefik:
 		// Formato já parseado
