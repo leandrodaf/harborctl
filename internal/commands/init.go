@@ -214,7 +214,8 @@ func (c *initCommand) runInteractiveSetup(ctx context.Context) error {
 	var beszelAuth bool
 	var beszelUsername, beszelPassword string
 	if includeBeszel {
-		beszelAuth, err = c.prompter.Confirm("Protect Beszel with authentication?", true)
+		c.output.Info("💡 Beszel has built-in authentication system")
+		beszelAuth, err = c.prompter.Confirm("Add additional Traefik basic auth? (not recommended)", false)
 		if err != nil {
 			return fmt.Errorf("failed to get Beszel auth preference: %w", err)
 		}

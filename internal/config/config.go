@@ -393,11 +393,16 @@ type Beszel struct {
 	Subdomain    string     `yaml:"subdomain"`
 	DataVolume   string     `yaml:"data_volume"`
 	SocketVolume string     `yaml:"socket_volume"`
-	BasicAuth    *BasicAuth `yaml:"basic_auth,omitempty"`
+	BasicAuth    *BasicAuth `yaml:"basic_auth,omitempty"`   // Não recomendado - usar auth interno
 	HubKey       string     `yaml:"hub_key,omitempty"`      // Chave pública do Hub para o Agent
 	HubKeyFile   string     `yaml:"hub_key_file,omitempty"` // Caminho para arquivo com chave pública
 	Token        string     `yaml:"token,omitempty"`        // Token de autenticação
 	HubURL       string     `yaml:"hub_url,omitempty"`      // URL do Hub (padrão: http://beszel-hub:8090)
+
+	// Configurações avançadas baseadas na documentação oficial
+	AppURL              string `yaml:"app_url,omitempty"`               // URL completa para notificações e config
+	DisablePasswordAuth bool   `yaml:"disable_password_auth,omitempty"` // Desabilitar login por senha (OAuth only)
+	UserCreation        bool   `yaml:"user_creation,omitempty"`         // Permitir criação automática de usuários
 }
 
 // Network representa uma network Docker

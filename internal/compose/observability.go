@@ -131,7 +131,7 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 			"traefik.http.routers.beszel-hub.entrypoints":               entrypoint,
 		}
 	} else {
-		// Configuração para produção
+		// Configuração para produção baseada na documentação oficial
 		entrypoint = "websecure"
 		subdomain = fmt.Sprintf("monitor.%s", domain)
 		hubLabels = map[string]string{
@@ -139,18 +139,23 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 			"traefik.docker.network": project + "_traefik",
 			"traefik.http.services.beszel-hub.loadbalancer.server.port": "8090",
 			"traefik.http.routers.beszel-hub.rule":                      fmt.Sprintf("Host(`%s`)", subdomain),
-			"traefik.http.routers.beszel-hub.entrypoints":               entrypoint,
+			"traefik.http.routers.beszel-hub.entrypoints":               "web,websecure", // Suportar ambos HTTP e HTTPS
 			"traefik.http.routers.beszel-hub.tls":                       "true",
 			"traefik.http.routers.beszel-hub.tls.certresolver":          tls.Resolver,
+			"traefik.http.routers.beszel-hub.tls.domains[0].main":       subdomain,
 		}
 	}
 
-	// Adicionar basic auth se configurado
-	if observability.Beszel.BasicAuth != nil && observability.Beszel.BasicAuth.Enabled {
-		middlewareName := "beszel-auth"
-		hubLabels["traefik.http.routers.beszel-hub.middlewares"] = middlewareName
-		hubLabels[fmt.Sprintf("traefik.http.middlewares.%s.basicauth.users", middlewareName)] = o.buildBasicAuthUsers(observability.Beszel.BasicAuth)
-	}
+	// NOTA: Beszel tem sistema de autenticação próprio que conflita com basic auth do Traefik
+	// Desabilitando basic auth do Traefik para evitar loops de autenticação
+	// O Beszel gerenciará sua própria autenticação internamente
+
+	// Commented out to fix authentication loop issue:
+	// if observability.Beszel.BasicAuth != nil && observability.Beszel.BasicAuth.Enabled {
+	//     middlewareName := "beszel-auth"
+	//     hubLabels["traefik.http.routers.beszel-hub.middlewares"] = middlewareName
+	//     hubLabels[fmt.Sprintf("traefik.http.middlewares.%s.basicauth.users", middlewareName)] = o.buildBasicAuthUsers(observability.Beszel.BasicAuth)
+	// }
 
 	// Beszel Hub
 	hub = map[string]any{
@@ -160,19 +165,19 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 			observability.Beszel.DataVolume + ":/beszel_data",
 			observability.Beszel.SocketVolume + ":/beszel_socket",
 		},
-		"environment": map[string]string{
-			"PORT": "8090",
-		},
-		"networks": []string{"private", "traefik"},
-		"restart":  "unless-stopped",
-		"labels":   hubLabels,
+		"environment": buildBeszelHubEnvironment(observability.Beszel, domain, env),
+		"networks":    []string{"private", "traefik"},
+		"restart":     "unless-stopped",
+		"labels":      hubLabels,
 	}
 
 	// Beszel Agent - configuração seguindo documentação oficial
 	agentEnvironment := map[string]string{
-		"LISTEN":  "/beszel_socket/beszel.sock", // Usar socket Unix para comunicação local
-		"HUB_URL": "http://beszel-hub:8090",     // URL do hub
+		"LISTEN": "/beszel_socket/beszel.sock", // Usar socket Unix para comunicação local
 	}
+
+	// Configurar HUB_URL - usar nome do container Docker
+	agentEnvironment["HUB_URL"] = "http://beszel-hub:8090"
 
 	// Configurar token se fornecido
 	if observability.Beszel.Token != "" {
@@ -200,6 +205,9 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		fmt.Sprintf("%s:/var/run/docker.sock:ro", dockerSocket),
 		observability.Beszel.SocketVolume + ":/beszel_socket",
 		"./beszel_agent_data:/var/lib/beszel-agent",
+		"/proc:/proc:ro",                     // Para estatísticas do sistema
+		"/sys:/sys:ro",                       // Para estatísticas de hardware
+		"/etc/os-release:/etc/os-release:ro", // Para informações do OS
 	}
 
 	agent = map[string]any{
@@ -207,11 +215,12 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		"container_name": "beszel-agent",
 		"environment":    agentEnvironment,
 		"volumes":        agentVolumes,
-		"network_mode":   "host", // Necessário para estatísticas de rede do host
+		"networks":       []string{"private"}, // Usar rede Docker normal para conectividade
 		"restart":        "unless-stopped",
 		"user":           "0", // Executar como root para acessar Docker socket
 		"privileged":     false,
 		"security_opt":   []string{"no-new-privileges:true"},
+		"pid":            "host", // Necessário para estatísticas de processo
 	}
 
 	return hub, agent
@@ -236,4 +245,40 @@ func (o *ObservabilityBuilderImpl) buildBasicAuthUsers(auth *config.BasicAuth) s
 	}
 
 	return strings.Join(users, ",")
+}
+
+// buildBeszelHubEnvironment constrói variáveis de ambiente para o Beszel Hub
+func buildBeszelHubEnvironment(beszel config.Beszel, domain string, env Environment) map[string]string {
+	environment := map[string]string{
+		"PORT": "8090",
+	}
+
+	// APP_URL baseado na documentação oficial
+	var appURL string
+	if beszel.AppURL != "" {
+		appURL = beszel.AppURL
+	} else {
+		// Gerar APP_URL automaticamente
+		if env.IsLocalhost() {
+			if domain == "localhost" {
+				appURL = "http://monitor.localhost"
+			} else {
+				appURL = fmt.Sprintf("http://monitor.%s", domain)
+			}
+		} else {
+			appURL = fmt.Sprintf("https://monitor.%s", domain)
+		}
+	}
+	environment["APP_URL"] = appURL
+
+	// Configurações avançadas de autenticação
+	if beszel.DisablePasswordAuth {
+		environment["DISABLE_PASSWORD_AUTH"] = "true"
+	}
+
+	if beszel.UserCreation {
+		environment["USER_CREATION"] = "true"
+	}
+
+	return environment
 }
