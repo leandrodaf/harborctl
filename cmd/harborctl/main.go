@@ -131,6 +131,15 @@ func registerCommands(
 	// Register status command
 	runner.Register(commands.NewStatusCommand(dockerService, output))
 
+	// Register logs command
+	runner.Register(commands.NewLogsCommand(dockerService, output))
+
+	// Register remote-logs command
+	runner.Register(commands.NewRemoteLogsCommand(output))
+
+	// Register remote-control command
+	runner.Register(commands.NewRemoteControlCommand(output))
+
 	// Register scale command
 	runner.Register(commands.NewScaleCommand(configManager, dockerService, output))
 
@@ -172,7 +181,14 @@ func showHelp(output cli.Output) {
 	output.Info("")
 	output.Info("MANAGEMENT:")
 	output.Info("  status            Show status of all services")
+	output.Info("  logs              Show services logs")
 	output.Info("  scale             Scale services up or down")
+	output.Info("")
+	output.Info("REMOTE:")
+	output.Info("  remote-logs       View logs from remote server")
+	output.Info("  remote-control    Control services on remote server")
+	output.Info("")
+	output.Info("TOOLS:")
 	output.Info("  validate          Validate stack configuration")
 	output.Info("  render            Render docker-compose configuration")
 	output.Info("  hash-password     Generate hashed password for authentication")
