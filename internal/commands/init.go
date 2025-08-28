@@ -36,7 +36,7 @@ func (c *initCommand) Name() string {
 }
 
 func (c *initCommand) Description() string {
-	return "Initialize a new project with interactive setup or direct options"
+	return "Initialize project configuration (interactive or direct mode)"
 }
 
 func (c *initCommand) Execute(ctx context.Context, args []string) error {

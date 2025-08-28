@@ -1,223 +1,380 @@
-# 📖 Guia Completo - HarborCtl
+# 📖 Complete Guide - HarborCtl
 
-Sistema completo para deploy de microserviços.
+Complete system for microservice deployment.
 
-## 🎯 Arquitetura
+## 🎯 Architecture
 
-**Servidor Base (uma vez):**
-- Traefik: Proxy reverso + SSL automático
-- Dozzle: Logs centralizados
-- Beszel: Monitoramento em tempo real
-- Redes e volumes isolados
+**Base Server (one time):**
+- Traefik: Reverse proxy + automatic SSL
+- Dozzle: Centralized logs
+- Beszel: Real-time monitoring
+- Isolated networks and volumes
 
-**Apps (múltiplas):**
-- Deploy via GitHub Actions
-- Integração automática com infraestrutura
-- Escalabilidade independente
+**Applications (multiple):**
+- Easy deployment from Git repositories
+- Automatic integration with infrastructure
+- Independent scalability
+- Environment variable management
 
-## 🚀 Setup Completo
+## 🚀 Complete Setup
 
-### 1. Instalar no Servidor
+### 1. Install on Server
 ```bash
 curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o harborctl
 chmod +x harborctl && sudo mv harborctl /usr/local/bin/
 ```
 
-### 2. Configurar Infraestrutura Base
+### 2. Configure Base Infrastructure
+
+#### Interactive Setup (Recommended)
 ```bash
-harborctl init-server --domain seudominio.com --email admin@seudominio.com
-harborctl up -f server-base.yml
+harborctl setup
 ```
 
-### 3. Configurar App para Deploy Automático
+This will guide you through:
+- Domain configuration
+- Email for SSL certificates
+- Project name
+- Environment selection
+- Authentication setup
+- Observability services
 
-**No repositório da sua app:**
+#### Direct Setup (Alternative)
 ```bash
-# Copiar templates
-mkdir -p deploy .github/workflows
-cp templates/microservice/api/deploy/stack.yml deploy/stack.yml
-cp templates/github-actions/deploy.yml .github/workflows/deploy.yml
-
-# Editar deploy/stack.yml conforme sua app
-# Configurar secrets no GitHub
+harborctl init-server --domain yourdomain.com --email admin@yourdomain.com
+harborctl up
 ```
 
-### 4. GitHub Secrets Necessários
-```
-PRODUCTION_HOST=seuservidor.com
-PRODUCTION_USER=deploy  
-PRODUCTION_SSH_KEY=sua-chave-ssh-privada
-```
+### 3. Create Projects
 
-### 5. Deploy Automático Ativado!
+#### Interactive Project Creation
 ```bash
-git push origin main  # ← Deploy automático!
+harborctl init --interactive
 ```
 
-## 🔧 Comandos Principais
+Follow the prompts to configure:
+- Project name (validated format)
+- Environment (local or production)
+- Domain configuration
+- Email for certificates (production only)
+- Dozzle log viewer inclusion
+- Beszel monitoring inclusion
 
-### Gerenciar Servidor Base
+#### Direct Project Creation
 ```bash
-# Status da infraestrutura
+# Production project
+harborctl init --domain yourdomain.com --email admin@yourdomain.com --project my-app --env production
+
+# Local development project
+harborctl init --env local --domain localhost --project my-dev-app
+```
+
+## 🔧 Configuration Management
+
+### Server Configuration
+```bash
+# Edit existing server configuration
+harborctl edit-server
+```
+
+You can modify:
+- Domain settings
+- Email configuration
+- Authentication credentials
+- Observability service settings
+- SSL certificate configuration
+
+### Project Configuration
+Projects are configured via `stack.yml` files that define:
+- Services and their configurations
+- Domain routing
+- Environment variables
+- Scaling parameters
+- Resource limits
+
+## 🚀 Service Deployment
+
+### Basic Deployment
+```bash
+# Deploy from Git repository
+harborctl deploy-service --service my-api --repo https://github.com/user/my-api.git
+
+# Deploy specific branch
+harborctl deploy-service --service my-api --repo https://github.com/user/my-api.git --branch develop
+```
+
+### Advanced Deployment
+```bash
+# Deploy with environment variables
+harborctl deploy-service --service my-api --env-file .env.prod
+
+# Deploy with secrets
+harborctl deploy-service --service my-api --secrets-file .secrets
+
+# Deploy with scaling
+harborctl deploy-service --service my-api --replicas 3
+
+# Force deployment (ignore warnings)
+harborctl deploy-service --service my-api --force
+```
+
+### Environment Files
+Create `.env` files for your services:
+```env
+# .env.prod
+NODE_ENV=production
+DATABASE_URL=postgres://user:pass@db:5432/myapp
+API_KEY=your-api-key-here
+LOG_LEVEL=info
+```
+
+### Secrets Files
+Create `.secrets` files for sensitive data:
+```env
+# .secrets
+DB_PASSWORD=super-secure-password
+JWT_SECRET=jwt-secret-key
+OAUTH_CLIENT_SECRET=oauth-secret
+```
+
+## 📊 Monitoring and Logs
+
+### Built-in Services
+- **Dozzle**: Web-based log viewer at `https://logs.yourdomain.com`
+- **Beszel**: Monitoring dashboard at `https://monitor.yourdomain.com`
+
+### Command Line Monitoring
+```bash
+# Check service status
 harborctl status
 
-# Parar/iniciar infraestrutura  
-harborctl stop
-harborctl start
-harborctl restart
+# Detailed status
+harborctl status --verbose
 
-# Desligar tudo
-harborctl down
+# View logs
+harborctl logs my-api
+
+# Follow logs in real-time
+harborctl logs my-api --follow
 ```
 
-### Deploy Manual de Apps
+### Remote Monitoring
 ```bash
-# Deploy via repositório
-harborctl deploy-service --service minha-api --repo https://github.com/usuario/minha-api.git
+# Check remote server status
+harborctl remote-status --host production.com
 
-# Deploy local (para testes)
-harborctl deploy-service --service minha-api --path deploy
+# View remote logs
+harborctl remote-logs --host production.com --service my-api
 
-# Escalar app específica
-harborctl scale minha-api --replicas 3
+# Execute remote commands
+harborctl remote-control --host production.com --command "status"
 ```
 
-## ⚙️ Configuração da App
+## 🔒 Security
 
-### Stack.yml Básico
+### Security Audit
+```bash
+# Full security audit
+harborctl security-audit
+
+# Quick security check
+harborctl security-audit --quick
+```
+
+The security audit checks:
+- SSL/TLS configuration
+- Authentication settings
+- File permissions
+- Network configuration
+- Container security
+- Repository security (if config files present)
+
+### Authentication Management
+```bash
+# Generate password hash for basic auth
+harborctl hash-password --password "mysecurepassword"
+
+# Edit authentication in server
+harborctl edit-server  # Follow prompts for auth setup
+```
+
+### Best Practices
+1. **Use strong passwords** for all authentication
+2. **Keep certificates updated** (automatic with Let's Encrypt)
+3. **Regular security audits** with `harborctl security-audit`
+4. **Environment separation** (use different domains for dev/prod)
+5. **Secrets management** (use secrets files, not environment variables)
+
+## ⚡ Scaling and Performance
+
+### Service Scaling
+```bash
+# Scale up
+harborctl scale my-api --replicas 5
+
+# Scale down
+harborctl scale my-api --replicas 1
+
+# Check current scaling
+harborctl status
+```
+
+### Load Balancing
+Traefik automatically load balances across replicas:
+- Sticky sessions available
+- Health checks included
+- Automatic failover
+
+### Resource Management
+Configure in your `stack.yml`:
 ```yaml
-version: 1
-project: minha-api
-
 services:
-  - name: minha-api
-    subdomain: api
-    image: node:18-alpine
-    expose: 3000
-    replicas: 2
-    
-    env:
-      NODE_ENV: production
-      API_PORT: 3000
-      
+  - name: my-api
     resources:
-      memory: 512m
+      memory: "512m"
       cpus: "0.5"
-      
-    health_check:
-      enabled: true
-      path: /health
-      
-    traefik: true
-
-volumes:
-  - name: minha_api_data
+      reserve_mem: "256m"
+      reserve_cpu: "0.25"
 ```
 
-### GitHub Action Básico
-```yaml
-name: Deploy
-on:
-  push:
-    branches: [main]
+## 🔄 Workflow Examples
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to production
-      run: |
-        curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o harborctl
-        chmod +x harborctl
-        
-        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > key
-        chmod 600 key
-        
-        ./harborctl deploy-service \
-          --host "${{ secrets.PRODUCTION_HOST }}" \
-          --user "${{ secrets.PRODUCTION_USER }}" \
-          --key key \
-          --service "${{ github.event.repository.name }}" \
-          --repo "${{ github.server_url }}/${{ github.repository }}"
-```
-
-## 🎯 Exemplos Práticos
-
-### API Node.js
+### Development Workflow
 ```bash
-# 1. Criar repositório com:
-# - src/app.js (sua API)
-# - Dockerfile 
-# - deploy/stack.yml
-# - .github/workflows/deploy.yml
+# 1. Setup local environment
+harborctl init --env local --domain localhost --project my-dev-project
 
-# 2. Configurar GitHub Secrets
+# 2. Deploy development services
+harborctl deploy-service --service api --path ./api-dev
+harborctl deploy-service --service frontend --path ./frontend-dev
 
-# 3. Push = Deploy automático!
-git push origin main
-```
+# 3. Start services
+harborctl up
 
-### Frontend React
-```yaml
-# deploy/stack.yml
-services:
-  - name: meu-frontend
-    subdomain: app
-    image: nginx:alpine
-    expose: 80
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
-```
-
-### Worker/Background Job
-```yaml
-# deploy/stack.yml  
-services:
-  - name: meu-worker
-    image: node:18-alpine
-    replicas: 1
-    # Sem traefik (não precisa de acesso web)
-    traefik: false
-```
-
-## 🔍 Troubleshooting
-
-### App não responde
-```bash
-# Ver logs
-harborctl logs minha-api --tail 50
-
-# Verificar status
+# 4. Monitor during development
+harborctl logs api --follow
 harborctl status
-
-# Reiniciar app específica
-harborctl restart minha-api
 ```
 
-### SSL não funciona
+### Production Workflow
 ```bash
-# Verificar configuração
-harborctl validate -f server-base.yml
+# 1. Setup production server (one time)
+harborctl setup  # Interactive production setup
 
-# Ver logs do Traefik
-harborctl logs traefik --tail 100
+# 2. Deploy production services
+harborctl deploy-service --service api --repo https://github.com/company/api.git --replicas 3
+harborctl deploy-service --service frontend --repo https://github.com/company/frontend.git --replicas 2
+
+# 3. Configure monitoring
+harborctl security-audit
+harborctl status --verbose
+
+# 4. Ongoing maintenance
+harborctl logs api  # Check logs
+harborctl scale api --replicas 5  # Scale as needed
 ```
 
-### Deploy falha
+### CI/CD Integration
 ```bash
-# Deploy com debug
-harborctl deploy-service --service minha-api --dry-run --verbose
-
-# Verificar secrets no GitHub
-# Verificar conectividade SSH
+# In your CI/CD pipeline
+harborctl deploy-service \
+  --service $SERVICE_NAME \
+  --repo $GITHUB_REPOSITORY \
+  --branch $GITHUB_REF_NAME \
+  --replicas $REPLICAS \
+  --env-file .env.${ENVIRONMENT}
 ```
 
-## 📚 Links Úteis
+## 🛠️ Troubleshooting
 
-- **Quick Start**: [QUICK_START.md](QUICK_START.md)
-- **Comandos**: [COMMAND_GUIDE.md](COMMAND_GUIDE.md)  
-- **Templates**: [../templates/](../templates/)
-- **Exemplos**: [../examples/](../examples/)
+### Common Issues
+
+**Service won't start:**
+```bash
+# Check logs
+harborctl logs service-name
+
+# Check configuration
+harborctl validate
+
+# Render and inspect compose
+harborctl render
+```
+
+**SSL issues:**
+```bash
+# Check domain configuration
+harborctl edit-server
+
+# Restart Traefik
+harborctl restart traefik
+```
+
+**Deployment failures:**
+```bash
+# Try with force flag
+harborctl deploy-service --service my-api --force
+
+# Check security audit
+harborctl security-audit
+```
+
+### Debug Commands
+```bash
+# Validate configuration
+harborctl validate
+
+# Render Docker Compose (for inspection)
+harborctl render
+
+# Security audit
+harborctl security-audit
+
+# Detailed status
+harborctl status --verbose
+```
+
+## 📚 Advanced Topics
+
+### Custom Domains
+Configure multiple domains in your stack configuration or use the edit server command to manage domain routing.
+
+### SSL Certificates
+- Automatic Let's Encrypt certificates for production
+- Custom certificates supported
+- Local development uses HTTP
+
+### Network Configuration
+- Isolated networks per project
+- Automatic service discovery
+- Traefik routing integration
+
+### Volume Management
+- Persistent volumes for data
+- Automatic backup strategies
+- Volume mounting for development
+
+## 🔗 Integration
+
+### Git Integration
+- Direct deployment from Git repositories
+- Branch-specific deployments
+- Automatic updates via webhooks
+
+### Docker Integration
+- Docker Compose generation
+- Multi-stage builds supported
+- Image optimization
+
+### Monitoring Integration
+- Prometheus metrics (via Beszel)
+- Log aggregation (via Dozzle)
+- Custom monitoring endpoints
+
+## 📞 Support
+
+For additional help:
+- Check the [Command Guide](COMMAND_GUIDE.md) for specific commands
+- Run `harborctl COMMAND --help` for detailed command help
+- Use `harborctl docs` for inline documentation
+- File issues on GitHub for bugs or feature requests

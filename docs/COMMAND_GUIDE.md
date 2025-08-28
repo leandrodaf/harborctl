@@ -1,272 +1,300 @@
-# 🔧 Guia de Comandos - HarborCtl
+# 🔧 Command Guide - HarborCtl
 
-Referência rápida de todos os comandos.
+Quick reference for all commands.
 
-## 🏗️ Comandos do Servidor Base
+## 🏗️ Server Commands
 
-Execute no servidor onde a infraestrutura roda:
+Execute on the server where infrastructure runs:
 
-### Setup Inicial
+### Initial Setup
 ```bash
-# Configurar infraestrutura base
-harborctl init-server --domain seudominio.com --email admin@seudominio.com
+# Interactive server setup (recommended)
+harborctl setup
 
-# Subir infraestrutura
-harborctl up -f server-base.yml
+# Direct server setup
+harborctl init-server --domain yourdomain.com --email admin@yourdomain.com
 
-# Validar configuração
-harborctl validate -f server-base.yml
+# Start infrastructure
+harborctl up
+
+# Validate configuration
+harborctl validate
 ```
 
-### Gerenciamento
+### Lifecycle Management
 ```bash
-# Status dos serviços
+# Service status
 harborctl status
 
-# Controle de ciclo de vida
-harborctl stop      # Para serviços (mantém containers)
-harborctl start     # Inicia serviços parados
-harborctl restart   # Reinicia todos os serviços
-harborctl pause     # Pausa execução
-harborctl unpause   # Resume execução
-harborctl down      # Para e remove tudo
+# Service control
+harborctl stop      # Stop services (keep containers)
+harborctl start     # Start stopped services
+harborctl restart   # Restart all services
+harborctl pause     # Pause execution
+harborctl unpause   # Resume execution
+harborctl down      # Stop and remove everything
 
-# Escalar serviços
-harborctl scale SERVICO --replicas N
+# Scale services
+harborctl scale SERVICE --replicas N
 ```
 
-### Utilitários
+### Utilities
 ```bash
-# Gerar senha para auth básica
-harborctl hash-password --password "minhasenha"
+# Generate password for basic auth
+harborctl hash-password --password "mypassword"
 
-# Auditoria de segurança
+# Security audit
 harborctl security-audit
 
-# Renderizar compose (debug)
-harborctl render -f server-base.yml
+# Render compose (debug)
+harborctl render
 
-# Documentação
+# Documentation
 harborctl docs
 ```
 
-## 🚀 Comandos de Deploy
+## 📱 Project Commands
 
-Execute de qualquer lugar (local, CI/CD, etc):
-
-### Deploy de Apps
+### Project Creation
 ```bash
-# Deploy via repositório
-harborctl deploy-service \
-  --service minha-api \
-  --repo https://github.com/usuario/minha-api.git
+# Interactive project creation (recommended)
+harborctl init --interactive
 
-# Deploy com branch específica
-harborctl deploy-service \
-  --service minha-api \
-  --repo https://github.com/usuario/minha-api.git \
-  --branch develop
+# Direct project creation
+harborctl init --domain example.com --email admin@example.com --project my-app --env production
 
-# Deploy local (código já baixado)
-harborctl deploy-service \
-  --service minha-api \
-  --path deploy
+# Local development
+harborctl init --env local --domain localhost --project my-app
 
-# Deploy com overrides
-harborctl deploy-service \
-  --service minha-api \
-  --replicas 5 \
-  --env-file .env.prod \
-  --force
-
-# Dry run (apenas validar)
-harborctl deploy-service \
-  --service minha-api \
-  --dry-run
+# With observability services
+harborctl init --domain example.com --email admin@example.com --project my-app
 ```
 
-### Desenvolvimento Local
+### Project Configuration
 ```bash
-# Inicializar novo projeto
-harborctl init --project meu-projeto --domain localhost
+# Edit server configuration
+harborctl edit-server
 
-# Testar localmente
-harborctl up -f deploy/stack.yml
-
-# Validar configuração
-harborctl validate -f deploy/stack.yml
+# Available options:
+# - Change domain
+# - Update email
+# - Configure authentication
+# - Manage observability services
 ```
 
-## 📊 Comandos de Monitoramento
+## 🚀 Deployment Commands
 
+### Service Deployment
 ```bash
-# Status geral
-harborctl status
+# Deploy from Git repository
+harborctl deploy-service --service my-api --repo https://github.com/user/my-api.git
 
-# Logs de serviço específico  
-harborctl logs SERVICO --tail 50 --follow
+# Deploy with specific branch
+harborctl deploy-service --service my-api --repo https://github.com/user/my-api.git --branch develop
 
-# Métricas de uso
-harborctl stats SERVICO
+# Deploy with environment file
+harborctl deploy-service --service my-api --env-file .env.prod
 
-# Health check
-harborctl health SERVICO
+# Deploy with secrets
+harborctl deploy-service --service my-api --secrets-file .secrets
+
+# Deploy with replicas
+harborctl deploy-service --service my-api --replicas 3
+
+# Force deployment (ignore warnings)
+harborctl deploy-service --service my-api --force
+
+# Dry run (validate only)
+harborctl deploy-service --service my-api --dry-run
 ```
 
-## 🔐 Comandos de Segurança
+## 🔍 Monitoring Commands
 
+### Logs and Status
 ```bash
-# Auditoria completa
+# View service logs
+harborctl logs SERVICE_NAME
+
+# Follow logs in real-time
+harborctl logs SERVICE_NAME --follow
+
+# Remote logs (from another server)
+harborctl remote-logs --host server.com --service my-api
+
+# Service status with details
+harborctl status --verbose
+```
+
+### Remote Management
+```bash
+# Remote status check
+harborctl remote-status --host server.com
+
+# Remote command execution
+harborctl remote-control --host server.com --command "status"
+```
+
+## 🔧 Configuration Commands
+
+### Authentication
+```bash
+# Generate password hash
+harborctl hash-password --password "mysecurepassword"
+
+# Output: $2a$10$... (bcrypt hash)
+```
+
+### Security
+```bash
+# Full security audit
 harborctl security-audit
 
-# Validar configuração
-harborctl validate -f stack.yml
+# Quick security check
+harborctl security-audit --quick
 
-# Gerar senhas seguras
-harborctl hash-password --generate
-harborctl hash-password --password "senha123"
-
-# Verificar permissões
-harborctl check-permissions
+# Audit specific configuration
+harborctl security-audit --config path/to/config.yml
 ```
 
-## 🎛️ Parâmetros Globais
-
-Todos os comandos aceitam:
-
+### Rendering and Validation
 ```bash
-# Arquivo de configuração específico
---config stack.yml
--f stack.yml
+# Render Docker Compose
+harborctl render
 
-# Modo verboso
---verbose
--v
+# Render specific file
+harborctl render -f custom-stack.yml
 
-# Modo silencioso
---quiet
--q
+# Validate configuration
+harborctl validate
 
-# Ajuda do comando
---help
--h
-
-# Versão
---version
+# Validate specific file
+harborctl validate -f custom-stack.yml
 ```
 
-## 🔄 Fluxos Comuns
+## 📋 Command Flags Reference
 
-### Setup Inicial Completo
+### Common Flags
 ```bash
-# 1. No servidor
-harborctl init-server --domain seudominio.com --email admin@seudominio.com
-harborctl up -f server-base.yml
+# File specification
+-f, --file STRING     # Configuration file (default: stack.yml)
+-o, --output STRING   # Output file
 
-# 2. Configurar app (local)
-mkdir minha-api && cd minha-api
-cp templates/microservice/api/deploy/stack.yml deploy/stack.yml
-cp templates/github-actions/deploy.yml .github/workflows/deploy.yml
+# Environment control
+--env STRING          # Environment (local/production)
+--domain STRING       # Base domain
+--email STRING        # Email for certificates
 
-# 3. Deploy automático
-git add . && git commit -m "Setup" && git push origin main
+# Service control
+--replicas INT        # Number of replicas
+--force               # Force operation
+--dry-run             # Validate only
+
+# Observability
+--no-dozzle           # Disable log viewer
+--no-beszel           # Disable monitoring
+
+# Verbosity
+--verbose             # Detailed output
+--quiet               # Minimal output
 ```
 
-### Deploy Manual
+### Init Command Flags
 ```bash
-# Desenvolvimento
-harborctl deploy-service --service minha-api --path deploy
+harborctl init [flags]
 
-# Produção
-harborctl deploy-service --service minha-api --repo https://github.com/usuario/minha-api.git --replicas 3
+--interactive         # Interactive mode
+--domain STRING       # Base domain
+--email STRING        # Email for SSL certificates
+--project STRING      # Project name (default: app)
+--env STRING          # Environment (local/production)
+--no-dozzle           # Don't include Dozzle
+--no-beszel           # Don't include Beszel
 ```
 
-### Troubleshooting
+### Deploy Service Flags
 ```bash
-# Verificar status
-harborctl status
+harborctl deploy-service [flags]
 
-# Ver logs
-harborctl logs minha-api --tail 100
+--service STRING      # Microservice name (required)
+--repo STRING         # Repository URL
+--branch STRING       # Repository branch (default: main)
+--env-file STRING     # Environment variables file
+--secrets-file STRING # Secrets file
+--replicas INT        # Number of replicas
+--force               # Force deployment ignoring warnings
+--dry-run             # Validate only without deploying
+```
 
-# Reiniciar serviço
-harborctl restart minha-api
+### Scale Command Flags
+```bash
+harborctl scale SERVICE [flags]
 
-# Auditoria
+--replicas INT        # Number of replicas (required)
+```
+
+## 💡 Usage Examples
+
+### Complete Workflow
+```bash
+# 1. Setup server
+harborctl setup
+
+# 2. Create project
+harborctl init --interactive
+
+# 3. Deploy services
+harborctl deploy-service --service api --repo https://github.com/company/api.git
+harborctl deploy-service --service frontend --repo https://github.com/company/frontend.git
+
+# 4. Scale as needed
+harborctl scale api --replicas 3
+harborctl scale frontend --replicas 2
+
+# 5. Monitor
+harborctl status --verbose
 harborctl security-audit
-
-# Validar config
-harborctl validate -f deploy/stack.yml
 ```
 
-### Manutenção
+### Development Workflow
 ```bash
-# Parar tudo
-harborctl down
+# Local development
+harborctl init --env local --domain localhost --project my-dev-project
 
-# Backup de configs
-cp server-base.yml backup/
+# Deploy local services
+harborctl deploy-service --service api --path ./api
+harborctl up
 
-# Atualizar infraestrutura
-harborctl up -f server-base.yml
+# Check logs
+harborctl logs api --follow
+```
 
-# Verificar saúde
-harborctl security-audit
+### Production Workflow
+```bash
+# Production setup
+harborctl init-server --domain production.com --email admin@production.com
+harborctl up
+
+# Deploy production services
+harborctl deploy-service --service api --repo https://github.com/company/api.git --replicas 3
+harborctl deploy-service --service frontend --repo https://github.com/company/frontend.git --replicas 2
+
+# Monitor and maintain
 harborctl status
+harborctl security-audit
+harborctl logs api
 ```
 
-## 📚 Exemplos por Cenário
-
-### GitHub Actions
-```yaml
-- name: Deploy
-  run: |
-    harborctl deploy-service \
-      --service ${{ github.event.repository.name }} \
-      --repo ${{ github.server_url }}/${{ github.repository }} \
-      --replicas 2
-```
-
-### Jenkins Pipeline
-```groovy
-stage('Deploy') {
-    steps {
-        sh '''
-            harborctl deploy-service \
-              --service ${JOB_NAME} \
-              --repo ${GIT_URL} \
-              --branch ${BRANCH_NAME}
-        '''
-    }
-}
-```
-
-### Docker Compose Local
-```bash
-# Testar antes do deploy
-harborctl validate -f deploy/stack.yml
-harborctl up -f deploy/stack.yml
-curl http://localhost:3000/health
-harborctl down
-```
-
-## 🆘 Comandos de Emergência
+## 🆘 Help and Documentation
 
 ```bash
-# Parar tudo imediatamente
-harborctl down --force
+# General help
+harborctl --help
 
-# Logs de emergência
-harborctl logs --all --tail 1000 > emergency.log
+# Command-specific help
+harborctl COMMAND --help
 
-# Status detalhado
-harborctl status --verbose > status.log
-
-# Backup rápido
-tar -czf backup-$(date +%Y%m%d).tar.gz server-base.yml .deploy/
-
-# Restaurar do backup
-harborctl down
-tar -xzf backup-20240828.tar.gz
-harborctl up -f server-base.yml
+# Examples:
+harborctl init --help
+harborctl deploy-service --help
+harborctl scale --help
 ```

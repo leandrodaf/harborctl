@@ -62,10 +62,13 @@ harborctl --help
 
 ## 🚀 Quick Start
 
-### 1️⃣ Server (Local Command)
+### 1️⃣ Setup (One Command)
 ```bash
-# Configure production server
-harborctl init-server --domain example.com
+# Interactive setup (recommended)
+harborctl init --interactive
+
+# Or direct setup
+harborctl init --domain example.com --email admin@example.com --project my-app --env production
 
 # Start infrastructure
 harborctl up
@@ -74,16 +77,16 @@ harborctl up
 harborctl status
 ```
 
-### 2️⃣ Microservice (Remote Command)
+### 2️⃣ Deploy Services
 ```bash
-# Create new microservice
-harborctl init --name my-api --type node
+# Deploy services from Git
+harborctl deploy-service --service my-api --repo https://github.com/user/my-api.git
 
-# Deploy microservice
-harborctl deploy-service \
-  --host server.example.com \
-  --service my-api \
-  --image ghcr.io/user/my-api:latest
+# Deploy with environment files
+harborctl deploy-service --service my-api --env-file .env.prod
+
+# Scale services
+harborctl scale my-api --replicas 3
 ```
 
 ## 📚 Documentation
@@ -94,74 +97,66 @@ harborctl deploy-service \
 | [📘 Complete Guide](docs/GUIDE.md) | Detailed documentation |
 | [⚡ Command Guide](docs/COMMAND_GUIDE.md) | Reference for all commands |
 
-## 🛠️ Main Commands
-
-### 🖥️ Server Commands (Local)
+## 🛠️ Essential Commands
 ```bash
-# Initialize server
-harborctl init-server --domain example.com
+# Initialize project (interactive or direct)
+harborctl init --interactive
+harborctl init --domain example.com --email admin@example.com --project my-app
 
 # Manage infrastructure
 harborctl up          # Start services
 harborctl down        # Stop services
 harborctl status      # View status
 harborctl scale       # Scale services
+
+# Deploy services
+harborctl deploy-service --service api-users --repo https://github.com/company/api-users.git
+
+# Edit configuration
+harborctl edit-server
 ```
 
-### 🚀 Remote Commands
+## 🎨 Available Features
+
+### 📁 Project Types
 ```bash
-# Deploy microservice
-harborctl deploy-service 
-  --host server.com 
-  --service api-users 
-  --image ghcr.io/company/api-users:v1.2.0
+# Local development environment
+harborctl init --env local --domain localhost
 
-# Create microservice
-harborctl init 
-  --name new-api 
-  --type python 
-  --template fastapi
+# Production environment
+harborctl init --env production --domain example.com --email admin@example.com
 ```
 
-## 🎨 Available Templates
+### 🔧 Services Included
+- **Traefik**: Automatic routing and SSL certificates
+- **Dozzle**: Centralized log viewer 
+- **Beszel**: Monitoring and metrics
+- **Your Apps**: Custom microservices deployment
 
-### 📁 Microservices
+### ⚙️ Deployment Options
 ```bash
-# Create Node.js microservice
-harborctl init --name my-api --type node
+# Deploy from Git repository
+harborctl deploy-service --service my-api --repo https://github.com/user/my-api.git
 
-# Create Python microservice
-harborctl init --name my-api --type python --template fastapi
+# Deploy with environment file
+harborctl deploy-service --service my-api --env-file .env.prod
 
-# Create Go microservice
-harborctl init --name my-api --type go
+# Deploy with secrets
+harborctl deploy-service --service my-api --secrets-file .secrets
+
+# Scale service
+harborctl scale my-api --replicas 3
 ```
 
-### ⚙️ GitHub Actions
-GitHub Actions templates are in `templates/github-actions/`:
+## 🔧 Additional Commands
 
-- **deploy.yml**: Complete CI/CD pipeline
-- **auto-scale.yml**: Monitoring and auto-scaling
-
-#### How to use in microservices:
-```bash
-# Copy template to your microservice
-cp templates/github-actions/deploy.yml .github/workflows/
-
-# Customize variables in the file
-# Configure secrets in GitHub:
-# - PRODUCTION_HOST
-# - PRODUCTION_USER  
-# - PRODUCTION_SSH_KEY
-```
-
-## 🔧 Automation Scripts
-
-| Script | Description |
-|--------|-----------|
-| `scripts/install.sh` | Automatic HarborCtl installation |
-| `scripts/setup-production-server.sh` | Production server configuration |
-| `scripts/create-microservice.sh` | Complete microservice creation |
+| Command | Description |
+|---------|-----------|
+| `harborctl remote-logs` | View logs from remote servers |
+| `harborctl remote-control` | Control services on remote servers |
+| `harborctl security-audit` | Run security audits |
+| `harborctl hash-password` | Generate password hashes |
+| `harborctl docs` | Show inline documentation |
 
 ## 🏗️ Development
 

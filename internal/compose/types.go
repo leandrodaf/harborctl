@@ -8,7 +8,6 @@ import (
 
 // ComposeFile representa um arquivo docker-compose
 type ComposeFile struct {
-	Version  string                    `yaml:"version"`
 	Services map[string]map[string]any `yaml:"services"`
 	Networks map[string]map[string]any `yaml:"networks"`
 	Volumes  map[string]map[string]any `yaml:"volumes"`
@@ -49,5 +48,3 @@ func GetEnvironmentFromStack(stack *config.Stack) Environment {
 	}
 	return EnvironmentProduction
 }
-
-

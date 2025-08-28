@@ -33,7 +33,6 @@ func NewMicroGenerator() Generator {
 // Generate gera o docker-compose.yml usando micro-interfaces
 func (g *GeneratorImpl) Generate(ctx context.Context, stack *config.Stack, options GenerateOptions) ([]byte, error) {
 	compose := &ComposeFile{
-		Version:  "3.9",
 		Services: make(map[string]map[string]any),
 		Networks: make(map[string]map[string]any),
 		Volumes:  make(map[string]map[string]any),
