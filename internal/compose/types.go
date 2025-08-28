@@ -50,12 +50,4 @@ func GetEnvironmentFromStack(stack *config.Stack) Environment {
 	return EnvironmentProduction
 }
 
-// DetectEnvironment detecta o ambiente baseado no domínio (compatibilidade)
-// Deprecated: Use GetEnvironmentFromStack
-func DetectEnvironment(domain string) Environment {
-	if domain == "localhost" || domain == "test.local" || domain == "" ||
-		strings.HasSuffix(domain, ".local") || strings.HasSuffix(domain, ".localhost") {
-		return EnvironmentLocal
-	}
-	return EnvironmentProduction
-}
+
