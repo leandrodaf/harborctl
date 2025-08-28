@@ -7,18 +7,24 @@ import (
 
 	"github.com/leandrodaf/harborctl/internal/config"
 	"github.com/leandrodaf/harborctl/pkg/cli"
+	"github.com/leandrodaf/harborctl/pkg/prompt"
 )
 
-// initServerCommand implementa o comando para criar configuração base do servidor
+// initServerCommand implements server base configuration creation
 type initServerCommand struct {
 	configManager config.Manager
+	prompter      prompt.Prompter
+	errorHandler  *prompt.ErrorHandler
 	output        cli.Output
 }
 
-// NewInitServerCommand cria um novo comando init-server
+// NewInitServerCommand creates a new init-server command
 func NewInitServerCommand(configManager config.Manager, output cli.Output) cli.Command {
+	prompter := prompt.NewPrompter()
 	return &initServerCommand{
 		configManager: configManager,
+		prompter:      prompter,
+		errorHandler:  prompt.NewErrorHandler(prompter),
 		output:        output,
 	}
 }
@@ -28,7 +34,7 @@ func (c *initServerCommand) Name() string {
 }
 
 func (c *initServerCommand) Description() string {
-	return "Cria configuração base do servidor (infraestrutura, logs, monitoramento)"
+	return "Create server base configuration (infrastructure, logs, monitoring)"
 }
 
 func (c *initServerCommand) Execute(ctx context.Context, args []string) error {
@@ -37,48 +43,57 @@ func (c *initServerCommand) Execute(ctx context.Context, args []string) error {
 	var domain, email, project string
 	var replaceExisting bool
 
-	fs.StringVar(&domain, "domain", "", "domínio base (ex.: exemplo.com)")
-	fs.StringVar(&email, "email", "", "email para ACME")
-	fs.StringVar(&project, "project", "infrastructure", "nome do projeto base")
-	fs.BoolVar(&replaceExisting, "replace", false, "substituir configuração existente")
+	fs.StringVar(&domain, "domain", "", "base domain (ex: example.com)")
+	fs.StringVar(&email, "email", "", "email for ACME certificates")
+	fs.StringVar(&project, "project", "infrastructure", "project name")
+	fs.BoolVar(&replaceExisting, "replace", false, "replace existing configuration")
 
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
 	if domain == "" || email == "" {
-		c.output.Error("Uso: harborctl init-server --domain <dominio> --email <email>")
-		return fmt.Errorf("domain e email são obrigatórios")
+		c.output.Error("Usage: harborctl init-server --domain <domain> --email <email>")
+		return fmt.Errorf("domain and email are required")
 	}
 
-	c.output.Info("🏗️  Criando configuração base do servidor...")
+	// Validate inputs
+	if err := prompt.ValidateDomain(domain); err != nil {
+		return fmt.Errorf("invalid domain: %w", err)
+	}
+	
+	if err := prompt.ValidateEmail(email); err != nil {
+		return fmt.Errorf("invalid email: %w", err)
+	}
 
-	// Verificar se já existe configuração
+	c.output.Info("🏗️ Creating server base configuration...")
+
+	// Check if configuration already exists
 	if exists, _ := fileExists("server-base.yml"); exists && !replaceExisting {
-		c.output.Error("server-base.yml já existe. Use --replace para sobrescrever")
-		return fmt.Errorf("configuração base já existe")
+		c.output.Error("server-base.yml already exists. Use --replace to overwrite")
+		return fmt.Errorf("base configuration already exists")
 	}
 
-	// Criar configuração base do servidor
+	// Create server base configuration
 	baseConfig := c.createBaseServerConfig(domain, email, project)
 
-	// Salvar configuração
+	// Save configuration
 	if err := c.configManager.SaveBaseConfig(ctx, "server-base.yml", baseConfig); err != nil {
-		return fmt.Errorf("erro ao criar configuração base: %w", err)
+		return fmt.Errorf("error creating base configuration: %w", err)
 	}
 
-	c.output.Info("✅ Configuração base do servidor criada: server-base.yml")
-	c.output.Info("📋 Esta configuração inclui:")
+	c.output.Info("✅ Server base configuration created: server-base.yml")
+	c.output.Info("📋 This configuration includes:")
 	c.output.Info("   • Traefik (reverse proxy + TLS)")
-	c.output.Info("   • Dozzle (logs em tempo real)")
-	c.output.Info("   • Beszel (monitoramento)")
-	c.output.Info("   • Redes e volumes base")
+	c.output.Info("   • Dozzle (real-time logs)")
+	c.output.Info("   • Beszel (monitoring)")
+	c.output.Info("   • Base networks and volumes")
 	c.output.Info("")
-	c.output.Info("🚀 Deploy da infraestrutura base:")
+	c.output.Info("🚀 Deploy base infrastructure:")
 	c.output.Info("   harborctl up -f server-base.yml")
 	c.output.Info("")
-	c.output.Info("📦 Para deployar microserviços:")
-	c.output.Info("   harborctl deploy-service --service <nome-servico> --repo <url-repo>")
+	c.output.Info("📦 To deploy microservices:")
+	c.output.Info("   harborctl deploy-service --service <service-name> --repo <repo-url>")
 
 	return nil
 }
