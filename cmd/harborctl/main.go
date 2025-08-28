@@ -103,6 +103,7 @@ func registerCommands(
 
 	// Register edit-server command (interactive)
 	runner.Register(commands.NewEditServerCommand(configManager, output))
+	runner.Register(commands.NewRegenerateBeszelKeysCommand(configManager, output))
 
 	// Register deploy-service command
 	runner.Register(commands.NewDeployServiceCommand(configManager, composeService, dockerService, filesystem, output))
