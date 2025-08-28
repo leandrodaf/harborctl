@@ -1,313 +1,223 @@
-# Complete Guide - HarborCtl
+# 📖 Guia Completo - HarborCtl
 
-Detailed documentation of the HarborCtl system for microservice deployment.
+Sistema completo para deploy de microserviços.
 
-## 📖 Index
+## 🎯 Arquitetura
 
-1. [Basic Concepts](#basic-concepts)
-2. [Installation](#installation)
-3. [Server Commands](#server-commands)
-4. [Remote Commands](#remote-commands)
-5. [Configuration](#configuration)
-6. [Practical Examples](#practical-examples)
-7. [Troubleshooting](#troubleshooting)
+**Servidor Base (uma vez):**
+- Traefik: Proxy reverso + SSL automático
+- Dozzle: Logs centralizados
+- Beszel: Monitoramento em tempo real
+- Redes e volumes isolados
 
-## 🎯 Basic Concepts
+**Apps (múltiplas):**
+- Deploy via GitHub Actions
+- Integração automática com infraestrutura
+- Escalabilidade independente
 
-### Architecture
+## 🚀 Setup Completo
 
-HarborCtl separates responsibilities into two layers:
-
-- **🏗️ Base Server**: Centralized infrastructure (Traefik, observability)
-- **🚀 Microservices**: Isolated applications deployed via Git
-
-### Workflow
-
-1. **Admin** configures base server once
-2. **Developers** deploy microservices independently
-3. **CI/CD** automates deployments via GitHub Actions
-
-## 💻 Installation
-
-### Super Quick Installation (Direct Binary)
+### 1. Instalar no Servidor
 ```bash
-sudo curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o /usr/local/bin/harborctl && sudo chmod +x /usr/local/bin/harborctl
+curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o harborctl
+chmod +x harborctl && sudo mv harborctl /usr/local/bin/
 ```
 
-### Auto-detect Architecture
+### 2. Configurar Infraestrutura Base
 ```bash
-ARCH=$(uname -m)
-case $ARCH in
-    x86_64) ARCH="amd64" ;;
-    aarch64|arm64) ARCH="arm64" ;;
-    *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
-esac
-
-curl -sSLf "https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_${ARCH}.tar.gz" | sudo tar -xzC /usr/local/bin harborctl
-```
-
-### Verify Installation
-```bash
-harborctl --version
-```
-
-### Build from Source
-```bash
-git clone https://github.com/leandrodaf/harborctl.git
-cd harborctlr
-go build -o harborctl ./cmd/harborctl
-```
-
-## 🏗️ Comandos do Servidor
-
-Execute estes comandos **no servidor de produção**.
-
-### Inicialização
-```bash
-# Setup completo da infraestrutura
-harborctl init-server --domain production.example.com --email admin@example.com
-
-# Validar configuração antes de aplicar
-harborctl validate -f server-base.yml
-
-# Aplicar infraestrutura
+harborctl init-server --domain seudominio.com --email admin@seudominio.com
 harborctl up -f server-base.yml
 ```
 
-### Gerenciamento
+### 3. Configurar App para Deploy Automático
+
+**No repositório da sua app:**
 ```bash
-# Ver status de todos os serviços
+# Copiar templates
+mkdir -p deploy .github/workflows
+cp templates/microservice/api/deploy/stack.yml deploy/stack.yml
+cp templates/github-actions/deploy.yml .github/workflows/deploy.yml
+
+# Editar deploy/stack.yml conforme sua app
+# Configurar secrets no GitHub
+```
+
+### 4. GitHub Secrets Necessários
+```
+PRODUCTION_HOST=seuservidor.com
+PRODUCTION_USER=deploy  
+PRODUCTION_SSH_KEY=sua-chave-ssh-privada
+```
+
+### 5. Deploy Automático Ativado!
+```bash
+git push origin main  # ← Deploy automático!
+```
+
+## 🔧 Comandos Principais
+
+### Gerenciar Servidor Base
+```bash
+# Status da infraestrutura
 harborctl status
 
-# Parar todos os serviços
+# Parar/iniciar infraestrutura  
+harborctl stop
+harborctl start
+harborctl restart
+
+# Desligar tudo
 harborctl down
-
-# Escalar serviços específicos
-harborctl scale traefik --replicas 2
-harborctl scale dozzle --replicas 1
 ```
 
-### Utilitários
+### Deploy Manual de Apps
 ```bash
-# Gerar senha para autenticação básica
-harborctl hash-password --password "mypassword"
+# Deploy via repositório
+harborctl deploy-service --service minha-api --repo https://github.com/usuario/minha-api.git
 
-# Auditoria de segurança
-harborctl security-audit
+# Deploy local (para testes)
+harborctl deploy-service --service minha-api --path deploy
 
-# Ver logs de serviço específico
-harborctl logs traefik --tail 50
-
-# Documentação
-harborctl docs
+# Escalar app específica
+harborctl scale minha-api --replicas 3
 ```
 
-## 🚀 Comandos Remotos
+## ⚙️ Configuração da App
 
-Execute estes comandos **remotamente** (local ou CI/CD).
-
-### Deploy de Microserviços
-```bash
-# Deploy básico
-harborctl deploy-service --service auth-service --repo https://github.com/company/auth-service.git
-
-# Deploy com branch específica
-harborctl deploy-service --service auth-service --repo https://github.com/company/auth-service.git --branch develop
-
-# Deploy local (código já clonado)
-harborctl deploy-service --service auth-service
-
-# Deploy com scaling
-harborctl deploy-service --service auth-service --replicas 5
-```
-
-### Desenvolvimento Local
-```bash
-# Inicializar novo microserviço
-harborctl init --project my-service --domain localhost
-
-# Validar configuração local
-harborctl validate -f deploy/stack.yml
-
-# Testar localmente
-harborctl up -f deploy/stack.yml
-```
-
-## ⚙️ Configuração
-
-### Variáveis de Ambiente
-
-#### Servidor
-```bash
-# /etc/environment no servidor
-DOMAIN=production.example.com
-ACME_EMAIL=admin@example.com
-LOG_LEVEL=info
-```
-
-#### Microserviço
+### Stack.yml Básico
 ```yaml
-# deploy/stack.yml
 version: 1
-project: auth-service
+project: minha-api
 
 services:
-  - name: auth-api
-    subdomain: auth
-    build:
-      context: .
-      dockerfile: Dockerfile
-    expose: 8080
+  - name: minha-api
+    subdomain: api
+    image: node:18-alpine
+    expose: 3000
     replicas: 2
     
     env:
-      APP_ENV: production
-      LOG_LEVEL: info
-      DATABASE_URL: ${DATABASE_URL}
-    
-    secrets:
-      - name: database_password
-        file: secrets/database_password.txt
-    
+      NODE_ENV: production
+      API_PORT: 3000
+      
+    resources:
+      memory: 512m
+      cpus: "0.5"
+      
+    health_check:
+      enabled: true
+      path: /health
+      
     traefik: true
+
+volumes:
+  - name: minha_api_data
 ```
 
-### GitHub Secrets
+### GitHub Action Básico
+```yaml
+name: Deploy
+on:
+  push:
+    branches: [main]
 
-Configure no repositório do microserviço:
-
-```bash
-# Secrets sensíveis
-DATABASE_PASSWORD=secret_password
-JWT_SECRET=secret_key_32_chars_minimum
-API_KEY=external_api_key
-ENCRYPTION_KEY=base64_encoded_key
-
-# Deploy
-DEPLOY_TOKEN=github_token
-HARBOR_SERVER_HOST=production.example.com
-HARBOR_SERVER_USER=harbor
-HARBOR_SSH_KEY=private_ssh_key
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy to production
+      run: |
+        curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o harborctl
+        chmod +x harborctl
+        
+        echo "${{ secrets.PRODUCTION_SSH_KEY }}" > key
+        chmod 600 key
+        
+        ./harborctl deploy-service \
+          --host "${{ secrets.PRODUCTION_HOST }}" \
+          --user "${{ secrets.PRODUCTION_USER }}" \
+          --key key \
+          --service "${{ github.event.repository.name }}" \
+          --repo "${{ github.server_url }}/${{ github.repository }}"
 ```
 
-### GitHub Variables
+## 🎯 Exemplos Práticos
 
+### API Node.js
 ```bash
-# URLs e configurações
-DATABASE_URL=postgresql://user:${DATABASE_PASSWORD}@postgres:5432/db
-API_BASE_URL=https://api.example.com
-LOG_LEVEL=info
-MONITORING_ENABLED=true
+# 1. Criar repositório com:
+# - src/app.js (sua API)
+# - Dockerfile 
+# - deploy/stack.yml
+# - .github/workflows/deploy.yml
+
+# 2. Configurar GitHub Secrets
+
+# 3. Push = Deploy automático!
+git push origin main
 ```
 
-## 📋 Exemplos Práticos
-
-### 1. Setup Inicial Completo
-
-```bash
-# No servidor de produção
-sudo useradd -m -s /bin/bash harbor
-sudo usermod -aG docker harbor
-sudo su - harbor
-
-# Clone o harborctlr
-git clone https://github.com/leandrodaf/harborctl.git /opt/harbor
-cd /opt/harbor
-
-# Setup automático
-./scripts/setup-production-server.sh production.example.com admin@example.com
-
-# Verificar
-harborctl status
+### Frontend React
+```yaml
+# deploy/stack.yml
+services:
+  - name: meu-frontend
+    subdomain: app
+    image: nginx:alpine
+    expose: 80
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
 ```
 
-### 2. Deploy de Microserviço Auth
-
-```bash
-# Criar microserviço (desenvolvedor)
-./scripts/create-microservice.sh auth-service api
-
-# Configurar GitHub Secrets no repositório
-# DATABASE_PASSWORD, JWT_SECRET, etc.
-
-# Deploy automático via push ou manual
-harborctl deploy-service --service auth-service --repo https://github.com/company/auth-service.git
-```
-
-### 3. Escalabilidade
-
-```bash
-# Durante pico de tráfego
-harborctl deploy-service --service auth-service --replicas 10
-harborctl deploy-service --service payment-service --replicas 8
-
-# Verificar recursos
-harborctl status --details
-
-# Voltar ao normal
-harborctl deploy-service --service auth-service --replicas 2
+### Worker/Background Job
+```yaml
+# deploy/stack.yml  
+services:
+  - name: meu-worker
+    image: node:18-alpine
+    replicas: 1
+    # Sem traefik (não precisa de acesso web)
+    traefik: false
 ```
 
 ## 🔍 Troubleshooting
 
-### Problemas Comuns
-
-#### Serviço não inicia
+### App não responde
 ```bash
-# Verificar logs
-harborctl logs auth-service --tail 100
+# Ver logs
+harborctl logs minha-api --tail 50
 
+# Verificar status
+harborctl status
+
+# Reiniciar app específica
+harborctl restart minha-api
+```
+
+### SSL não funciona
+```bash
 # Verificar configuração
-harborctl validate -f deploy/stack.yml
+harborctl validate -f server-base.yml
 
-# Verificar recursos do Docker
-docker system df
-docker stats
+# Ver logs do Traefik
+harborctl logs traefik --tail 100
 ```
 
-#### SSL não funciona
+### Deploy falha
 ```bash
-# Verificar Traefik
-harborctl logs traefik --tail 50
-
-# Verificar DNS
-nslookup your-domain.com
-
-# Forçar renovação certificado
-docker exec traefik traefik acme --force
-```
-
-#### Deploy falha
-```bash
-# Verificar conectividade SSH
-ssh harbor@production.example.com "harborctl status"
-
 # Deploy com debug
-harborctl deploy-service --service auth-service --debug
+harborctl deploy-service --service minha-api --dry-run --verbose
 
-# Verificar GitHub Actions
-# https://github.com/company/repo/actions
+# Verificar secrets no GitHub
+# Verificar conectividade SSH
 ```
 
-### Logs e Monitoramento
+## 📚 Links Úteis
 
-```bash
-# Logs do sistema
-journalctl -u docker -f
-
-# Logs via web
-# https://logs.yourdomain.com (Dozzle)
-
-# Métricas via web  
-# https://monitor.yourdomain.com (Beszel)
-
-# Status detalhado
-harborctl status --json
-```
-
-## 🔗 Links Úteis
-
-- [Quick Start](QUICK_START.md) - Começar rapidamente
-- [Scripts](../scripts/) - Scripts de automação  
-- [Templates](../templates/) - Templates prontos
-- [GitHub Issues](https://github.com/leandrodaf/harborctl/issues) - Support
+- **Quick Start**: [QUICK_START.md](QUICK_START.md)
+- **Comandos**: [COMMAND_GUIDE.md](COMMAND_GUIDE.md)  
+- **Templates**: [../templates/](../templates/)
+- **Exemplos**: [../examples/](../examples/)

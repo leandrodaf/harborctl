@@ -1,91 +1,74 @@
-# Quick Start - HarborCtl
+# 🚀 Quick Start - HarborCtl
 
-Get started with HarborCtl in 5 minutes.
+Funcione em 3 minutos!
 
-## ⚡ Quick Setup
+## 📦 1. Instalar no Servidor
 
-### 1. Install HarborCtl
-
-**Super Quick Installation (Direct Binary):**
 ```bash
-sudo curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o /usr/local/bin/harborctl && sudo chmod +x /usr/local/bin/harborctl
+# Download e instalar
+curl -sSLf https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_amd64 -o harborctl
+chmod +x harborctl
+sudo mv harborctl /usr/local/bin/
 ```
 
-**Auto-detect Architecture:**
-```bash
-ARCH=$(uname -m)
-case $ARCH in
-    x86_64) ARCH="amd64" ;;
-    aarch64|arm64) ARCH="arm64" ;;
-    *) echo "Unsupported architecture: $ARCH" && exit 1 ;;
-esac
-
-curl -sSLf "https://github.com/leandrodaf/harborctl/releases/latest/download/harborctl_linux_${ARCH}.tar.gz" | sudo tar -xzC /usr/local/bin harborctl
-```
-
-### 2. Server Setup (Admin)
+## 🏗️ 2. Configurar Servidor (Uma vez)
 
 ```bash
-# On production server
-harborctl init-server --domain yourdomain.com --email admin@yourdomain.com
+# Criar infraestrutura base
+harborctl init-server --domain seudominio.com --email admin@seudominio.com
 harborctl up -f server-base.yml
+
+# ✅ Pronto! Servidor configurado com:
+# • Traefik (proxy + SSL automático)
+# • Logs: https://logs.seudominio.com
+# • Monitor: https://monitor.seudominio.com
 ```
 
-### 3. Microservice Deploy (Dev)
+## 🚀 3. Deploy de Apps (GitHub Actions)
+
+### Configurar Repositório da App
+
+**1. Copiar template:**
+```bash
+# No seu repositório de microserviço
+cp templates/microservice/api/deploy/stack.yml deploy/stack.yml
+cp templates/github-actions/deploy.yml .github/workflows/deploy.yml
+```
+
+**2. Configurar GitHub Secrets:**
+```
+PRODUCTION_HOST=seuservidor.com
+PRODUCTION_USER=deploy
+PRODUCTION_SSH_KEY=sua-chave-ssh-privada
+```
+
+**3. Push = Deploy Automático!**
+```bash
+git add .
+git commit -m "Setup deploy"
+git push origin main
+# ✅ Deploy automático ativado!
+```
+
+## 📱 4. Deploy Manual (Opcional)
 
 ```bash
-# Create microservice
-./scripts/create-microservice.sh my-service api
+# Deploy direto do repositório
+harborctl deploy-service --service minha-api --repo https://github.com/usuario/minha-api.git
 
-# Deploy
-harborctl deploy-service --service my-service --repo https://github.com/company/my-service.git
+# Deploy local (para testes)
+harborctl deploy-service --service minha-api --path deploy
 ```
 
-## 🎯 Practical Example
+## 🎯 Resultado Final
 
-### API Microservice
+- **✅ Servidor:** Infraestrutura rodando
+- **✅ Apps:** Deploy automático via Git
+- **✅ SSL:** Certificados automáticos  
+- **✅ Logs:** Centralizados e acessíveis
+- **✅ Monitor:** Métricas em tempo real
 
-```bash
-# 1. Create structure
-./scripts/create-microservice.sh auth-api api yourdomain.com
-
-# 2. Configure secrets in GitHub
-# DATABASE_PASSWORD, JWT_SECRET, API_KEY
-
-# 3. Implement code in src/
-# 4. Commit and push = automatic deploy
-
-# Or manual deploy
-harborctl deploy-service --service auth-api
-```
-
-### Result
-
-- **API**: https://auth-api.yourdomain.com
-- **Logs**: https://logs.yourdomain.com  
-- **Metrics**: https://monitor.yourdomain.com
-
-## 🔧 Essential Commands
-
-```bash
-# General status
-harborctl status
-
-# Deploy microservice  
-harborctl deploy-service --service NAME
-
-# Scale
-harborctl scale NAME --replicas 5
-
-# Logs
-harborctl logs NAME --tail 50
-
-# Help
-harborctl docs
-```
-
-## 📚 Next Steps
-
-- [📖 Complete Guide](GUIDE.md) - Detailed documentation
-- [🔧 Scripts](../scripts/) - Automation
-- [📋 Templates](../templates/) - Ready-to-use templates
+**🔗 URLs de acesso:**
+- Sua app: `https://app.seudominio.com`
+- Logs: `https://logs.seudominio.com`
+- Monitor: `https://monitor.seudominio.com`
