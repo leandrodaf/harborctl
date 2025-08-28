@@ -219,8 +219,8 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		"restart":        "unless-stopped",
 		"user":           "0", // Executar como root para acessar Docker socket
 		"privileged":     false,
-		"security_opt":   []string{"no-new-privileges:true"},
-		"pid":            "host", // Necessário para estatísticas de processo
+		"security_opt":   []string{"no-new-privileges:true", "apparmor:unconfined"}, // Fix AppArmor issue
+		"pid":            "host",                                                    // Necessário para estatísticas de processo
 	}
 
 	return hub, agent
