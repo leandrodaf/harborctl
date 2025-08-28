@@ -200,8 +200,6 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		fmt.Sprintf("%s:/var/run/docker.sock:ro", dockerSocket),
 		observability.Beszel.SocketVolume + ":/beszel_socket",
 		"./beszel_agent_data:/var/lib/beszel-agent",
-		"/proc:/proc:ro",                     // Para estatísticas do sistema
-		"/sys:/sys:ro",                       // Para estatísticas de hardware
 		"/etc/os-release:/etc/os-release:ro", // Para informações do OS
 	}
 
