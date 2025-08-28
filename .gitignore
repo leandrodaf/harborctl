@@ -37,29 +37,45 @@ Thumbs.db
 *.log
 logs/
 
-# Arquivos gerados
+# Arquivos gerados pelo CLI
 .deploy/
 *.generated.yml
 compose.generated.yml
+compose.local.yml
+compose.prod.yml
+server-base.yml
+stack.yml
 
 # Environment files
 .env
 .env.local
 .env.production
+.env.development
+.env.staging
 
-# Stack específicos do projeto
-stack.yml
+# Stack específicos do projeto (manter apenas exemplos)
 !examples/
+!repos.yml.example
+!templates/
 
-# Dados do Docker
+# Dados do Docker e volumes
 traefik_acme/
 *_data/
+dozzle_data/
+beszel_data/
+beszel_socket/
 
 # Certificados e chaves
 *.pem
 *.key
 *.crt
 acme.json
+letsencrypt/
+
+# Arquivos de configuração temporários gerados
+*.backup.yml
+*.tmp.yml
+.harborctl_cache/
 
 # Build artifacts
 dist/

@@ -120,7 +120,8 @@ func (c *securityAuditCommand) checkSecurityIssues(stack *config.Stack) []string
 	// Verificar serviços
 	for _, service := range stack.Services {
 		// Verificar exposição pública sem autenticação
-		if service.Traefik && service.BasicAuth != nil && !service.BasicAuth.Enabled {
+		traefik := service.GetTraefik()
+		if traefik != nil && traefik.Enabled && service.BasicAuth != nil && !service.BasicAuth.Enabled {
 			issues = append(issues, fmt.Sprintf("Serviço '%s' está exposto publicamente sem autenticação", service.Name))
 		}
 

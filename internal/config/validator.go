@@ -111,8 +111,9 @@ func (v *validator) validateServices(services []Service) error {
 		if sv.Expose <= 0 {
 			return fmt.Errorf("%s: expose must be > 0", sv.Name)
 		}
-		if sv.Traefik && sv.Subdomain == "" {
-			return fmt.Errorf("%s: subdomain is required when traefik=true", sv.Name)
+		traefik := sv.GetTraefik()
+		if (traefik != nil && traefik.Enabled) && sv.Subdomain == "" {
+			return fmt.Errorf("%s: subdomain is required when traefik is enabled", sv.Name)
 		}
 
 		// Validate replicas

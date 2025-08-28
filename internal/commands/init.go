@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/leandrodaf/harborctl/internal/config"
 	"github.com/leandrodaf/harborctl/pkg/cli"
@@ -35,12 +36,13 @@ func (c *initCommand) Description() string {
 func (c *initCommand) Execute(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("init", flag.ExitOnError)
 
-	var domain, email, project string
+	var domain, email, project, env string
 	var noDozzle, noBeszel bool
 
 	fs.StringVar(&domain, "domain", "", "base domain (ex: example.com)")
 	fs.StringVar(&email, "email", "", "email for ACME")
 	fs.StringVar(&project, "project", "app", "project name")
+	fs.StringVar(&env, "env", "", "environment (local|prod) - auto-detected if not specified")
 	fs.BoolVar(&noDozzle, "no-dozzle", false, "don't include dozzle")
 	fs.BoolVar(&noBeszel, "no-beszel", false, "don't include beszel")
 
@@ -48,17 +50,27 @@ func (c *initCommand) Execute(ctx context.Context, args []string) error {
 		return err
 	}
 
-	if domain == "" || email == "" {
-		c.output.Error("Usage: harborctl init --domain <domain> --email <email>")
-		return fmt.Errorf("domain and email are required")
+	// Para ambiente local, email não é obrigatório
+	isLocalEnv := env == "local" || domain == "localhost" || domain == "test.local" || 
+		domain == "" || strings.HasSuffix(domain, ".local") || strings.HasSuffix(domain, ".localhost")
+	
+	if domain == "" {
+		c.output.Error("Usage: harborctl init --domain <domain> [--email <email>] [--env local|prod]")
+		return fmt.Errorf("domain is required")
+	}
+	
+	if !isLocalEnv && email == "" {
+		c.output.Error("Email is required for production environments")
+		return fmt.Errorf("email is required for production environments")
 	}
 
 	options := config.CreateOptions{
-		Domain:   domain,
-		Email:    email,
-		Project:  project,
-		NoDozzle: noDozzle,
-		NoBeszel: noBeszel,
+		Domain:      domain,
+		Email:       email,
+		Project:     project,
+		Environment: env,
+		NoDozzle:    noDozzle,
+		NoBeszel:    noBeszel,
 	}
 
 	if err := c.configManager.Create(ctx, "stack.yml", options); err != nil {

@@ -18,17 +18,17 @@ type VolumeBuilder interface {
 
 // ServiceBuilder constrói serviços
 type ServiceBuilder interface {
-	Build(ctx context.Context, service config.Service, domain string) map[string]any
+	BuildWithEnvironment(ctx context.Context, service config.Service, domain string, env Environment, project string) map[string]any
 }
 
 // TraefikBuilder constrói configuração do Traefik
 type TraefikBuilder interface {
-	Build(ctx context.Context, stack *config.Stack) map[string]any
+	Build(ctx context.Context, stack *config.Stack, env Environment) map[string]any
 }
 
 // ObservabilityBuilder constrói serviços de observabilidade
 type ObservabilityBuilder interface {
-	Build(ctx context.Context, observability config.Observability, options GenerateOptions) map[string]map[string]any
+	Build(ctx context.Context, observability config.Observability, domain string, env Environment, options GenerateOptions, project string) map[string]map[string]any
 }
 
 // HealthChecker define estratégias de health check

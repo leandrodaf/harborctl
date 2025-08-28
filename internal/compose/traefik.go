@@ -3,6 +3,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/leandrodaf/harborctl/internal/config"
 )
@@ -14,106 +15,125 @@ func NewTraefikBuilder() TraefikBuilder {
 	return &traefikBuilder{}
 }
 
-func (b *traefikBuilder) Build(ctx context.Context, stack *config.Stack) map[string]any {
-	args := []string{
-		"--providers.docker=true",
-		"--providers.docker.exposedbydefault=false",
-		"--entrypoints.websecure.address=:443",
-		"--api=false",
+func (b *traefikBuilder) Build(ctx context.Context, stack *config.Stack, env Environment) map[string]any {
+	var args []string
+	var ports []string
+	var labels map[string]string
+	var volumes []string
+	var environment map[string]string
 
-		// Força HTTPS apenas - remove HTTP
-		"--entrypoints.websecure.http.tls=true",
-
-		// Configurações de Segurança
-		"--global.checknewversion=false",
-		"--global.sendanonymoususage=false",
-
-		// Headers de Segurança
-		"--entrypoints.websecure.http.middlewares=security-headers@docker",
-
-		// Timeouts e Limites
-		"--entrypoints.websecure.transport.respondingtimeouts.readtimeout=60s",
-		"--entrypoints.websecure.transport.respondingtimeouts.writetimeout=60s",
-		"--entrypoints.websecure.transport.respondingtimeouts.idletimeout=180s",
-
-		// Rate Limiting Global
-		"--entrypoints.websecure.http.middlewares=rate-limit@docker",
-
-		// Tamanho máximo de request
-		"--entrypoints.websecure.http.middlewares=request-size@docker",
+	// Configurações base vs customizadas
+	if stack.Traefik != nil {
+		// Usar configurações customizadas
+		return b.buildCustomTraefik(stack, env)
 	}
 
-	if stack.TLS.Mode == "acme" {
+	// Configurações padrão baseadas no ambiente
+	if env.IsLocalhost() {
+		args = []string{
+			"--providers.docker=true",
+			"--providers.docker.exposedbydefault=false",
+			"--entrypoints.web.address=:80",
+			"--entrypoints.websecure.address=:443",
+			"--api.dashboard=true",
+			"--api.insecure=true",
+			"--log.level=INFO",
+			"--providers.docker.network=" + stack.Project + "_traefik",
+			"--global.checknewversion=false",
+			"--global.sendanonymoususage=false",
+		}
+		ports = []string{"80:80", "443:443", "8080:8080"}
+		labels = map[string]string{
+			"traefik.enable": "false",
+		}
+		volumes = []string{"/var/run/docker.sock:/var/run/docker.sock:ro"}
+	} else {
+		args = []string{
+			"--providers.docker=true",
+			"--providers.docker.exposedbydefault=false",
+			"--entrypoints.web.address=:80",
+			"--entrypoints.websecure.address=:443",
+			"--entrypoints.websecure.http.tls=true",
+			"--entrypoints.web.http.redirections.entrypoint.to=websecure",
+			"--entrypoints.web.http.redirections.entrypoint.scheme=https",
+			"--entrypoints.web.http.redirections.entrypoint.permanent=true",
+			"--providers.docker.network=" + stack.Project + "_traefik",
+			"--global.checknewversion=false",
+			"--global.sendanonymoususage=false",
+			"--entrypoints.websecure.transport.respondingtimeouts.readtimeout=60s",
+			"--entrypoints.websecure.transport.respondingtimeouts.writetimeout=60s",
+			"--entrypoints.websecure.transport.respondingtimeouts.idletimeout=180s",
+		}
+		ports = []string{"80:80", "443:443"}
+		labels = map[string]string{
+			"traefik.enable": "false",
+		}
+		volumes = []string{"/var/run/docker.sock:/var/run/docker.sock:ro"}
+	}
+
+	// Adiciona configurações ACME apenas se estiver em modo ACME
+	if stack.TLS.Mode == "acme" && !env.IsLocalhost() {
 		res := stack.TLS.Resolver
 		args = append(args,
 			fmt.Sprintf("--certificatesresolvers.%s.acme.email=%s", res, stack.TLS.Email),
 			fmt.Sprintf("--certificatesresolvers.%s.acme.storage=/letsencrypt/acme.json", res),
-			fmt.Sprintf("--certificatesresolvers.%s.acme.httpchallenge=true", res),
-			fmt.Sprintf("--certificatesresolvers.%s.acme.httpchallenge.entrypoint=websecure", res),
 		)
 
 		if stack.TLS.DNS != nil && stack.TLS.DNS.Provider != "" {
+			// Usar DNS challenge quando configurado
 			args = append(args,
 				fmt.Sprintf("--certificatesresolvers.%s.acme.dnschallenge=true", res),
 				fmt.Sprintf("--certificatesresolvers.%s.acme.dnschallenge.provider=%s", res, stack.TLS.DNS.Provider),
 			)
+
+			// Adicionar variáveis de ambiente do DNS provider se fornecidas
+			if len(stack.TLS.DNS.Env) > 0 {
+				if environment == nil {
+					environment = make(map[string]string)
+				}
+				for _, envVar := range stack.TLS.DNS.Env {
+					// Assume formato KEY=VALUE
+					parts := strings.SplitN(envVar, "=", 2)
+					if len(parts) == 2 {
+						environment[parts[0]] = parts[1]
+					}
+				}
+			}
+		} else {
+			// Usar HTTP challenge como fallback
+			args = append(args,
+				fmt.Sprintf("--certificatesresolvers.%s.acme.httpchallenge=true", res),
+				fmt.Sprintf("--certificatesresolvers.%s.acme.httpchallenge.entrypoint=web", res),
+			)
 		}
 	}
 
-	return map[string]any{
-		"image":   "traefik:v3.5",
-		"command": args,
-		"ports":   []string{"443:443"}, // Apenas HTTPS
-		"volumes": []string{
-			"traefik_acme:/letsencrypt",
-			"/var/run/docker.sock:/var/run/docker.sock:ro",
-		},
-		"labels": map[string]string{
-			// Middlewares de Segurança Globais
-			"traefik.http.middlewares.security-headers.headers.framedeny":                              "true",
-			"traefik.http.middlewares.security-headers.headers.sslredirect":                            "true",
-			"traefik.http.middlewares.security-headers.headers.stsincludesubdomains":                   "true",
-			"traefik.http.middlewares.security-headers.headers.stspreload":                             "true",
-			"traefik.http.middlewares.security-headers.headers.stsseconds":                             "63072000",
-			"traefik.http.middlewares.security-headers.headers.contenttypenosniff":                     "true",
-			"traefik.http.middlewares.security-headers.headers.browserxssfilter":                       "true",
-			"traefik.http.middlewares.security-headers.headers.referrerpolicy":                         "strict-origin-when-cross-origin",
-			"traefik.http.middlewares.security-headers.headers.permissionspolicy":                      "camera=(), microphone=(), payment=(), usb=()",
-			"traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Proto": "https",
-
-			// Rate Limiting - 100 req/min por IP
-			"traefik.http.middlewares.rate-limit.ratelimit.burst":                            "20",
-			"traefik.http.middlewares.rate-limit.ratelimit.average":                          "100",
-			"traefik.http.middlewares.rate-limit.ratelimit.period":                           "1m",
-			"traefik.http.middlewares.rate-limit.ratelimit.sourcecriterion.ipstrategy.depth": "1",
-
-			// Limite de tamanho de request - 10MB
-			"traefik.http.middlewares.request-size.buffering.maxrequestbodybytes": "10485760",
-
-			// Timeout personalizado
-			"traefik.http.middlewares.timeout.circuitbreaker.expression": "ResponseCodeRatio(500, 600, 0, 600) > 0.25",
-
-			// Remove headers sensíveis
-			"traefik.http.middlewares.secure-headers.headers.customresponseheaders.Server":       "",
-			"traefik.http.middlewares.secure-headers.headers.customresponseheaders.X-Powered-By": "",
-
-			// Traefik não expõe a si mesmo
-			"traefik.enable": "false",
-		},
-		"networks": []string{"public", "private"},
+	config := map[string]any{
+		"image":    "traefik:v3.5",
+		"command":  args,
+		"ports":    ports,
+		"labels":   labels,
+		"networks": []string{"public", "private", "traefik"},
 		"restart":  "always",
+		"volumes":  volumes,
+	}
 
-		// Configurações de segurança do container
-		"security_opt": []string{
-			"no-new-privileges:true",
-		},
-		"read_only": true,
-		"tmpfs": []string{
-			"/tmp:rw,noexec,nosuid,size=100m",
-		},
+	if len(environment) > 0 {
+		config["environment"] = environment
+	}
 
-		// Limites de recursos para evitar DoS
-		"deploy": map[string]any{
+	// Adiciona volume para ACME apenas em produção
+	if stack.TLS.Mode == "acme" && !env.IsLocalhost() {
+		volumes = append(volumes, "traefik_acme:/letsencrypt")
+		config["volumes"] = volumes
+	}
+
+	// Adiciona configurações de segurança apenas em produção
+	if !env.IsLocalhost() {
+		config["security_opt"] = []string{"no-new-privileges:true"}
+		config["read_only"] = true
+		config["tmpfs"] = []string{"/tmp:rw,noexec,nosuid,size=100m"}
+		config["deploy"] = map[string]any{
 			"resources": map[string]any{
 				"limits": map[string]string{
 					"cpus":   "1.0",
@@ -124,6 +144,220 @@ func (b *traefikBuilder) Build(ctx context.Context, stack *config.Stack) map[str
 					"memory": "128M",
 				},
 			},
-		},
+		}
 	}
+
+	return config
+}
+
+// buildCustomTraefik constrói configuração customizada do Traefik
+func (b *traefikBuilder) buildCustomTraefik(stack *config.Stack, env Environment) map[string]any {
+	traefikConfig := stack.Traefik
+
+	// Imagem
+	image := "traefik:v3.5"
+	if traefikConfig.Image != "" {
+		image = traefikConfig.Image
+	}
+
+	// Commands
+	var commands []string
+	if len(traefikConfig.Commands) > 0 {
+		commands = traefikConfig.Commands
+	} else {
+		// Commands padrão baseados no ambiente
+		if env.IsLocalhost() {
+			commands = []string{
+				"--providers.docker=true",
+				"--providers.docker.exposedbydefault=false",
+				"--entrypoints.web.address=:80",
+				"--entrypoints.websecure.address=:443",
+				"--api.dashboard=true",
+				"--api.insecure=true",
+				"--log.level=INFO",
+				"--providers.docker.network=" + stack.Project + "_traefik",
+				"--global.checknewversion=false",
+				"--global.sendanonymoususage=false",
+			}
+		} else {
+			commands = []string{
+				"--providers.docker=true",
+				"--providers.docker.exposedbydefault=false",
+				"--entrypoints.web.address=:80",
+				"--entrypoints.websecure.address=:443",
+				"--entrypoints.websecure.http.tls=true",
+				"--entrypoints.web.http.redirections.entrypoint.to=websecure",
+				"--entrypoints.web.http.redirections.entrypoint.scheme=https",
+				"--entrypoints.web.http.redirections.entrypoint.permanent=true",
+				"--providers.docker.network=" + stack.Project + "_traefik",
+				"--global.checknewversion=false",
+				"--global.sendanonymoususage=false",
+				"--entrypoints.websecure.transport.respondingtimeouts.readtimeout=60s",
+				"--entrypoints.websecure.transport.respondingtimeouts.writetimeout=60s",
+				"--entrypoints.websecure.transport.respondingtimeouts.idletimeout=180s",
+			}
+		}
+	}
+
+	// Adicionar configurações de entry points customizados
+	for name, ep := range traefikConfig.EntryPoints {
+		commands = append(commands, fmt.Sprintf("--entrypoints.%s.address=%s", name, ep.Address))
+		if ep.AsDefault {
+			commands = append(commands, fmt.Sprintf("--entrypoints.%s.asDefault=true", name))
+		}
+	}
+
+	// Adicionar configurações de providers customizados
+	for name, provider := range traefikConfig.Providers {
+		if provider.Docker != nil {
+			commands = append(commands, fmt.Sprintf("--providers.docker.%s=%v", name, provider.Docker))
+		}
+		if provider.File != nil {
+			commands = append(commands, fmt.Sprintf("--providers.file.%s=%v", name, provider.File))
+		}
+	}
+
+	// Adicionar configurações de middlewares customizados
+	for name, middleware := range traefikConfig.Middlewares {
+		commands = append(commands, b.buildMiddlewareCommands(name, middleware)...)
+	}
+
+	// Adicionar configurações de plugins
+	for name, plugin := range traefikConfig.Plugins {
+		commands = append(commands, fmt.Sprintf("--experimental.plugins.%s.modulename=%s", name, plugin.ModuleName))
+		if plugin.Version != "" {
+			commands = append(commands, fmt.Sprintf("--experimental.plugins.%s.version=%s", name, plugin.Version))
+		}
+	}
+
+	// API
+	if traefikConfig.API != nil {
+		if traefikConfig.API.Dashboard {
+			commands = append(commands, "--api.dashboard=true")
+		}
+		if traefikConfig.API.Insecure {
+			commands = append(commands, "--api.insecure=true")
+		}
+		if traefikConfig.API.Debug {
+			commands = append(commands, "--api.debug=true")
+		}
+	}
+
+	// Log
+	if traefikConfig.Log != nil {
+		if traefikConfig.Log.Level != "" {
+			commands = append(commands, fmt.Sprintf("--log.level=%s", traefikConfig.Log.Level))
+		}
+		if traefikConfig.Log.Format != "" {
+			commands = append(commands, fmt.Sprintf("--log.format=%s", traefikConfig.Log.Format))
+		}
+		if traefikConfig.Log.FilePath != "" {
+			commands = append(commands, fmt.Sprintf("--log.filepath=%s", traefikConfig.Log.FilePath))
+		}
+	}
+
+	// Access Log
+	if traefikConfig.AccessLog != nil {
+		commands = append(commands, "--accesslog=true")
+		if traefikConfig.AccessLog.FilePath != "" {
+			commands = append(commands, fmt.Sprintf("--accesslog.filepath=%s", traefikConfig.AccessLog.FilePath))
+		}
+		if traefikConfig.AccessLog.Format != "" {
+			commands = append(commands, fmt.Sprintf("--accesslog.format=%s", traefikConfig.AccessLog.Format))
+		}
+	}
+
+	// Metrics
+	if traefikConfig.Metrics != nil {
+		if traefikConfig.Metrics.Prometheus != nil {
+			commands = append(commands, "--metrics.prometheus=true")
+			if traefikConfig.Metrics.Prometheus.AddEntryPointsLabels {
+				commands = append(commands, "--metrics.prometheus.addentrypointslabels=true")
+			}
+			if traefikConfig.Metrics.Prometheus.AddServicesLabels {
+				commands = append(commands, "--metrics.prometheus.addserviceslabels=true")
+			}
+		}
+	}
+
+	// Ports
+	ports := []string{"80:80", "443:443", "8080:8080"}
+	if len(traefikConfig.Ports) > 0 {
+		ports = traefikConfig.Ports
+	}
+
+	// Labels
+	labels := map[string]string{"traefik.enable": "false"}
+	if len(traefikConfig.Labels) > 0 {
+		for k, v := range traefikConfig.Labels {
+			labels[k] = v
+		}
+	}
+
+	// Volumes
+	volumes := []string{"/var/run/docker.sock:/var/run/docker.sock:ro"}
+	if len(traefikConfig.Volumes) > 0 {
+		volumes = append(volumes, traefikConfig.Volumes...)
+	}
+
+	config := map[string]any{
+		"image":    image,
+		"command":  commands,
+		"ports":    ports,
+		"labels":   labels,
+		"networks": []string{"public", "private", "traefik"},
+		"restart":  "always",
+		"volumes":  volumes,
+	}
+
+	// Environment variables
+	if len(traefikConfig.Environment) > 0 {
+		config["environment"] = traefikConfig.Environment
+	}
+
+	// Adiciona configurações de segurança apenas em produção
+	if !env.IsLocalhost() {
+		config["security_opt"] = []string{"no-new-privileges:true"}
+		config["read_only"] = true
+		config["tmpfs"] = []string{"/tmp:rw,noexec,nosuid,size=100m"}
+	}
+
+	return config
+}
+
+// buildMiddlewareCommands constrói comandos para middlewares customizados
+func (b *traefikBuilder) buildMiddlewareCommands(name string, middleware config.TraefikMiddleware) []string {
+	var commands []string
+
+	if middleware.AddPrefix != nil {
+		commands = append(commands, fmt.Sprintf("--http.middlewares.%s.addprefix.prefix=%s", name, middleware.AddPrefix.Prefix))
+	}
+
+	if middleware.StripPrefix != nil {
+		for _, prefix := range middleware.StripPrefix.Prefixes {
+			commands = append(commands, fmt.Sprintf("--http.middlewares.%s.stripprefix.prefixes=%s", name, prefix))
+		}
+		if middleware.StripPrefix.ForceSlash {
+			commands = append(commands, fmt.Sprintf("--http.middlewares.%s.stripprefix.forceslash=true", name))
+		}
+	}
+
+	if middleware.ReplacePathRegex != nil {
+		commands = append(commands, fmt.Sprintf("--http.middlewares.%s.replacepathregex.regex=%s", name, middleware.ReplacePathRegex.Regex))
+		commands = append(commands, fmt.Sprintf("--http.middlewares.%s.replacepathregex.replacement=%s", name, middleware.ReplacePathRegex.Replacement))
+	}
+
+	if middleware.RateLimit != nil {
+		if middleware.RateLimit.Average > 0 {
+			commands = append(commands, fmt.Sprintf("--http.middlewares.%s.ratelimit.average=%d", name, middleware.RateLimit.Average))
+		}
+		if middleware.RateLimit.Period != "" {
+			commands = append(commands, fmt.Sprintf("--http.middlewares.%s.ratelimit.period=%s", name, middleware.RateLimit.Period))
+		}
+		if middleware.RateLimit.Burst > 0 {
+			commands = append(commands, fmt.Sprintf("--http.middlewares.%s.ratelimit.burst=%d", name, middleware.RateLimit.Burst))
+		}
+	}
+
+	return commands
 }

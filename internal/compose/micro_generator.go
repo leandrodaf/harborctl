@@ -3,8 +3,9 @@ package compose
 import (
 	"context"
 
-	"github.com/leandrodaf/harborctl/internal/config"
 	"gopkg.in/yaml.v3"
+
+	"github.com/leandrodaf/harborctl/internal/config"
 )
 
 // GeneratorImpl implementa Generator usando micro-interfaces
@@ -39,25 +40,35 @@ func (g *GeneratorImpl) Generate(ctx context.Context, stack *config.Stack, optio
 		Secrets:  make(map[string]map[string]any),
 	}
 
+	// Detecta o ambiente baseado na configuração do stack
+	env := GetEnvironmentFromStack(stack)
+
 	// Networks
 	compose.Networks = g.networkBuilder.Build(ctx, stack.Networks)
+
+	// Adiciona a rede traefik se não existir (necessária para Traefik e observabilidade)
+	if _, exists := compose.Networks["traefik"]; !exists {
+		compose.Networks["traefik"] = map[string]any{
+			"driver": "bridge",
+		}
+	}
 
 	// Volumes
 	compose.Volumes = g.volumeBuilder.Build(ctx, stack.Volumes)
 
 	// Services
 	for _, service := range stack.Services {
-		serviceConfig := g.serviceBuilder.Build(ctx, service, stack.Domain)
+		serviceConfig := g.serviceBuilder.BuildWithEnvironment(ctx, service, stack.Domain, env, stack.Project)
 		compose.Services[service.Name] = serviceConfig
 	}
 
 	// Traefik
-	traefikConfig := g.traefikBuilder.Build(ctx, stack)
+	traefikConfig := g.traefikBuilder.Build(ctx, stack, env)
 	compose.Services["traefik"] = traefikConfig
 
 	// Observability
 	if !options.DisableDozzle || !options.DisableBeszel {
-		observabilityServices := g.observabilityBuilder.Build(ctx, stack.Observability, options)
+		observabilityServices := g.observabilityBuilder.Build(ctx, stack.Observability, stack.Domain, env, options, stack.Project)
 		for name, service := range observabilityServices {
 			compose.Services[name] = service
 		}
@@ -68,9 +79,7 @@ func (g *GeneratorImpl) Generate(ctx context.Context, stack *config.Stack, optio
 
 	// Marshal
 	return g.marshaler.Marshal(compose)
-}
-
-// buildSecrets constrói as secrets do compose
+} // buildSecrets constrói as secrets do compose
 func (g *GeneratorImpl) buildSecrets(compose *ComposeFile, stack *config.Stack) {
 	secretsMap := make(map[string]bool)
 

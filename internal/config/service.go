@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -20,11 +21,12 @@ type Manager interface {
 
 // CreateOptions configura a criação de stack
 type CreateOptions struct {
-	Domain   string
-	Email    string
-	Project  string
-	NoDozzle bool
-	NoBeszel bool
+	Domain      string
+	Email       string
+	Project     string
+	Environment string
+	NoDozzle    bool
+	NoBeszel    bool
 }
 
 // manager implementa Manager
@@ -66,15 +68,99 @@ func (m *manager) Create(ctx context.Context, path string, options CreateOptions
 		return errors.New("stack.yml already exists")
 	}
 
-	stack := &Stack{
-		Version: 1,
-		Project: options.Project,
-		Domain:  options.Domain,
-		TLS: TLS{
+	// Detectar ambiente automaticamente se não especificado
+	env := options.Environment
+	if env == "" {
+		if options.Domain == "localhost" || options.Domain == "test.local" ||
+			strings.HasSuffix(options.Domain, ".local") || strings.HasSuffix(options.Domain, ".localhost") {
+			env = "local"
+		} else {
+			env = "production"
+		}
+	}
+
+	// Configuração de TLS baseada no ambiente
+	var tlsConfig TLS
+	if env == "local" {
+		tlsConfig = TLS{
+			Mode: "disabled",
+		}
+	} else {
+		tlsConfig = TLS{
 			Mode:     "acme",
 			Email:    options.Email,
 			Resolver: "le",
-		},
+		}
+	}
+
+	// Configuração de serviço baseada no ambiente
+	var exampleService Service
+	if env == "local" {
+		exampleService = Service{
+			Name:       "web",
+			Subdomain:  "app",
+			Image:      "nginx:alpine",
+			Expose:     80,
+			TraefikRaw: &ServiceTraefik{Enabled: true},
+		}
+	} else {
+		exampleService = Service{
+			Name:      "example-app",
+			Subdomain: "app",
+			Image:     "nginx:alpine",
+			Expose:    80,
+			Replicas:  2,
+			Env: map[string]string{
+				"APP_ENV":      "production",
+				"DATABASE_URL": "postgres://user:pass@db:5432/myapp",
+			},
+			EnvFile: []string{".env"},
+			Secrets: []Secret{
+				{
+					Name:   "db_password",
+					File:   "./secrets/db_password.txt",
+					Target: "/run/secrets/db_password",
+				},
+				{
+					Name:     "api_key",
+					External: true,
+				},
+			},
+			Volumes: []VolumeMount{
+				{
+					Source: "app_data",
+					Target: "/var/www/data",
+				},
+			},
+			Resources: &Resources{
+				Memory:     "512m",
+				CPUs:       "0.5",
+				ReserveMem: "256m",
+				ReserveCPU: "0.25",
+				ShmSize:    "128m",
+				Ulimits: map[string]Ulimit{
+					"nofile": {Soft: 1024, Hard: 2048},
+				},
+			},
+			TraefikRaw: &ServiceTraefik{
+				Enabled:     true,
+				Middlewares: []string{"security-headers", "rate-limit"},
+			},
+			BasicAuth: &BasicAuth{
+				Enabled: false,
+				Users: map[string]string{
+					"admin": "$2a$10$...", // Use: harborctl hash-password --generate
+				},
+			},
+		}
+	}
+
+	stack := &Stack{
+		Version:     1,
+		Project:     options.Project,
+		Domain:      options.Domain,
+		Environment: env,
+		TLS:         tlsConfig,
 		Observability: Observability{
 			Dozzle: Dozzle{
 				Enabled:    !options.NoDozzle,
@@ -89,8 +175,8 @@ func (m *manager) Create(ctx context.Context, path string, options CreateOptions
 			},
 		},
 		Networks: map[string]Network{
-			"public":  {},
 			"private": {Internal: true},
+			"public":  {Internal: false},
 		},
 		Volumes: []Volume{
 			{Name: "traefik_acme"},
@@ -99,54 +185,7 @@ func (m *manager) Create(ctx context.Context, path string, options CreateOptions
 			{Name: "beszel_socket"},
 			{Name: "app_data"},
 		},
-		Services: []Service{
-			{
-				Name:      "example-app",
-				Subdomain: "app",
-				Image:     "nginx:alpine",
-				Expose:    80,
-				Replicas:  2,
-				Env: map[string]string{
-					"APP_ENV":      "production",
-					"DATABASE_URL": "postgres://user:pass@db:5432/myapp",
-				},
-				EnvFile: []string{".env"},
-				Secrets: []Secret{
-					{
-						Name:   "db_password",
-						File:   "./secrets/db_password.txt",
-						Target: "/run/secrets/db_password",
-					},
-					{
-						Name:     "api_key",
-						External: true,
-					},
-				},
-				Volumes: []VolumeMount{
-					{
-						Source: "app_data",
-						Target: "/var/www/data",
-					},
-				},
-				Resources: &Resources{
-					Memory:     "512m",
-					CPUs:       "0.5",
-					ReserveMem: "256m",
-					ReserveCPU: "0.25",
-					ShmSize:    "128m",
-					Ulimits: map[string]Ulimit{
-						"nofile": {Soft: 1024, Hard: 2048},
-					},
-				},
-				Traefik: true,
-				BasicAuth: &BasicAuth{
-					Enabled: false, // Mude para true para habilitar
-					Users: map[string]string{
-						"admin": "$2a$10$...", // Use: harborctl hash-password --generate
-					},
-				},
-			},
-		},
+		Services: []Service{exampleService},
 	}
 
 	data, err := yaml.Marshal(stack)

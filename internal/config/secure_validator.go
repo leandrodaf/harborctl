@@ -28,9 +28,11 @@ func (sv *SecureValidator) ValidateStack(stack *Stack) error {
 		return fmt.Errorf("domínio inválido: %w", err)
 	}
 
-	// Valida email
-	if err := security.ValidateEmail(stack.TLS.Email); err != nil {
-		return fmt.Errorf("email inválido: %w", err)
+	// Valida email apenas se TLS estiver habilitado e for ACME
+	if stack.TLS.Mode == "acme" {
+		if err := security.ValidateEmail(stack.TLS.Email); err != nil {
+			return fmt.Errorf("email inválido: %w", err)
+		}
 	}
 
 	// Valida serviços
