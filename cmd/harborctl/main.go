@@ -104,6 +104,7 @@ func registerCommands(
 	// Register edit-server command (interactive)
 	runner.Register(commands.NewEditServerCommand(configManager, output))
 	runner.Register(commands.NewRegenerateBeszelKeysCommand(configManager, output))
+	runner.Register(commands.NewBeszelSetupCommand(configManager, output))
 
 	// Register deploy-service command
 	runner.Register(commands.NewDeployServiceCommand(configManager, composeService, dockerService, filesystem, output))
@@ -169,6 +170,7 @@ func showHelp(output cli.Output) {
 	output.Info("COMMANDS:")
 	output.Info("  init              🆕 Initialize project configuration (interactive or direct)")
 	output.Info("  edit-server       🔧 Edit existing server configuration")
+	output.Info("  beszel-setup      🔧 Setup Beszel monitoring system automatically")
 	output.Info("  deploy-service    Deploy a service to the stack")
 	output.Info("")
 	output.Info("LIFECYCLE:")

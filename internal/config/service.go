@@ -21,20 +21,21 @@ type Manager interface {
 
 // CreateOptions configura a criação de stack
 type CreateOptions struct {
-	Domain         string
-	Email          string
-	Project        string
-	Environment    string
-	NoDozzle       bool
-	NoBeszel       bool
-	DozzleAuth     bool
-	BeszelAuth     bool
-	DozzleUsername string
-	DozzlePassword string
-	BeszelUsername string
-	BeszelPassword string
-	BeszelHubKey   string // Chave SSH gerada automaticamente
-	BeszelToken    string // Token gerado automaticamente
+	Domain           string
+	Email            string
+	Project          string
+	Environment      string
+	NoDozzle         bool
+	NoBeszel         bool
+	DozzleAuth       bool
+	BeszelAuth       bool
+	DozzleUsername   string
+	DozzlePassword   string
+	BeszelUsername   string
+	BeszelPassword   string
+	BeszelHubKey     string // Chave SSH pública gerada automaticamente
+	BeszelPrivateKey string // Chave SSH privada gerada automaticamente
+	BeszelToken      string // Token gerado automaticamente
 }
 
 // manager implementa Manager
@@ -110,14 +111,7 @@ func (m *manager) Create(ctx context.Context, path string, options CreateOptions
 		}
 	}
 
-	var beszelBasicAuth *BasicAuth
-	if options.BeszelAuth && !options.NoBeszel {
-		beszelBasicAuth = &BasicAuth{
-			Enabled:  true,
-			Username: options.BeszelUsername,
-			Password: options.BeszelPassword,
-		}
-	}
+	// Beszel não usa BasicAuth - usa autenticação própria via tokens
 
 	stack := &Stack{
 		Version:     1,
@@ -137,8 +131,7 @@ func (m *manager) Create(ctx context.Context, path string, options CreateOptions
 				Subdomain:    "monitor",
 				DataVolume:   "beszel_data",
 				SocketVolume: "beszel_socket",
-				BasicAuth:    beszelBasicAuth,
-				HubKey:       options.BeszelHubKey,
+				PublicKey:    options.BeszelHubKey,
 				Token:        options.BeszelToken,
 			},
 		},

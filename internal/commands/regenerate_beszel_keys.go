@@ -93,7 +93,7 @@ func (c *RegenerateBeszelKeysCommand) Execute(ctx context.Context, args []string
 	}
 
 	// Update configuration
-	stack.Observability.Beszel.HubKey = pubKey
+	stack.Observability.Beszel.PublicKey = pubKey
 	stack.Observability.Beszel.Token = token
 
 	// Save updated configuration

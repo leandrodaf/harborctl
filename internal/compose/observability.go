@@ -100,59 +100,17 @@ func (o *ObservabilityBuilderImpl) buildDozzle(observability config.Observabilit
 }
 
 func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observability, domain string, env Environment, project string, tls config.TLS) (hub, agent map[string]any) {
-	var entrypoint string
-	var subdomain string
-	var hubLabels map[string]string
-
 	// Determinar Docker socket path
 	dockerSocket := "/var/run/docker.sock"
 	if observability.DockerSocket != "" {
 		dockerSocket = observability.DockerSocket
 	}
 
-	if env.IsLocalhost() {
-		// Configuração para desenvolvimento local
-		entrypoint = "web"
-		if domain == "localhost" {
-			subdomain = "monitor.localhost"
-		} else {
-			subdomain = fmt.Sprintf("monitor.%s", domain)
-		}
-		hubLabels = map[string]string{
-			"traefik.enable":         "true",
-			"traefik.docker.network": project + "_traefik",
-			"traefik.http.services.beszel-hub.loadbalancer.server.port": "8090",
-			"traefik.http.routers.beszel-hub.rule":                      fmt.Sprintf("Host(`%s`)", subdomain),
-			"traefik.http.routers.beszel-hub.entrypoints":               entrypoint,
-		}
-	} else {
-		// Configuração para produção baseada na documentação oficial
-		entrypoint = "websecure"
-		subdomain = fmt.Sprintf("monitor.%s", domain)
-		hubLabels = map[string]string{
-			"traefik.enable":         "true",
-			"traefik.docker.network": project + "_traefik",
-			"traefik.http.services.beszel-hub.loadbalancer.server.port": "8090",
-			"traefik.http.routers.beszel-hub.rule":                      fmt.Sprintf("Host(`%s`)", subdomain),
-			"traefik.http.routers.beszel-hub.entrypoints":               "web,websecure", // Suportar ambos HTTP e HTTPS
-			"traefik.http.routers.beszel-hub.tls":                       "true",
-			"traefik.http.routers.beszel-hub.tls.certresolver":          tls.Resolver,
-			"traefik.http.routers.beszel-hub.tls.domains[0].main":       subdomain,
-		}
-	}
+	// Configurar labels do Traefik baseado no ambiente
+	subdomain := fmt.Sprintf("monitor.%s", domain)
+	hubLabels := o.buildBeszelHubLabels(subdomain, project, env, tls)
 
-	// NOTA: Beszel tem sistema de autenticação próprio que conflita com basic auth do Traefik
-	// Desabilitando basic auth do Traefik para evitar loops de autenticação
-	// O Beszel gerenciará sua própria autenticação internamente
-
-	// Commented out to fix authentication loop issue:
-	// if observability.Beszel.BasicAuth != nil && observability.Beszel.BasicAuth.Enabled {
-	//     middlewareName := "beszel-auth"
-	//     hubLabels["traefik.http.routers.beszel-hub.middlewares"] = middlewareName
-	//     hubLabels[fmt.Sprintf("traefik.http.middlewares.%s.basicauth.users", middlewareName)] = o.buildBasicAuthUsers(observability.Beszel.BasicAuth)
-	// }
-
-	// Beszel Hub
+	// Beszel Hub - configuração simplificada
 	hub = map[string]any{
 		"image":          "henrygd/beszel:latest",
 		"container_name": "beszel-hub",
@@ -160,44 +118,19 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 			observability.Beszel.DataVolume + ":/beszel_data",
 			observability.Beszel.SocketVolume + ":/beszel_socket",
 		},
-		"environment": buildBeszelHubEnvironment(observability.Beszel, domain, env),
+		"environment": o.buildBeszelHubEnvironment(observability.Beszel, domain, env),
 		"networks":    []string{"private", "traefik"},
 		"restart":     "unless-stopped",
 		"labels":      hubLabels,
 	}
 
-	// Beszel Agent - configuração seguindo documentação oficial
-	agentEnvironment := map[string]string{
-		"LISTEN": "/beszel_socket/beszel.sock", // Usar socket Unix para comunicação local
-	}
-
-	// NOTA: Quando usando LISTEN com socket Unix, NÃO definir HUB_URL
-	// O agent usará apenas o socket Unix para comunicação com o hub
-
-	// Configurar token se fornecido
-	if observability.Beszel.Token != "" {
-		agentEnvironment["TOKEN"] = observability.Beszel.Token
-	} else {
-		agentEnvironment["TOKEN"] = "CONFIGURE_TOKEN_IN_BESZEL_CONFIG"
-	}
-
-	// Configurar chave pública para autenticação
-	if observability.Beszel.HubKey != "" {
-		agentEnvironment["KEY"] = observability.Beszel.HubKey
-	} else if observability.Beszel.HubKeyFile != "" {
-		agentEnvironment["KEY_FILE"] = observability.Beszel.HubKeyFile
-	} else {
-		// Aviso: sem chave configurada, o agent falhará
-		agentEnvironment["KEY"] = "CONFIGURE_HUB_KEY_IN_BESZEL_CONFIG"
-	}
-
-	// HUB_URL não é usado quando LISTEN está configurado para socket Unix
-
+	// Beszel Agent - configuração otimizada para socket Unix
+	agentEnvironment := o.buildBeszelAgentEnvironment(observability.Beszel, domain, env)
 	agentVolumes := []string{
 		fmt.Sprintf("%s:/var/run/docker.sock:ro", dockerSocket),
 		observability.Beszel.SocketVolume + ":/beszel_socket",
 		"./beszel_agent_data:/var/lib/beszel-agent",
-		"/etc/os-release:/etc/os-release:ro", // Para informações do OS
+		"/etc/os-release:/etc/os-release:ro",
 	}
 
 	agent = map[string]any{
@@ -205,13 +138,11 @@ func (o *ObservabilityBuilderImpl) buildBeszel(observability config.Observabilit
 		"container_name": "beszel-agent",
 		"environment":    agentEnvironment,
 		"volumes":        agentVolumes,
-		"networks":       []string{"private"}, // Usar rede Docker normal para conectividade
+		"networks":       []string{"private"},
 		"restart":        "unless-stopped",
-		"user":           "0", // Executar como root para acessar Docker socket
+		"user":           "0",
 		"privileged":     false,
 		"security_opt":   []string{"no-new-privileges:true", "apparmor:unconfined"},
-		// Removido "pid": "host" para evitar conflito com AppArmor
-		// O agent ainda consegue coletar a maioria das estatísticas via /proc e /sys
 	}
 
 	return hub, agent
@@ -237,36 +168,77 @@ func (o *ObservabilityBuilderImpl) buildBasicAuthUsers(auth *config.BasicAuth) s
 	return strings.Join(users, ",")
 }
 
-func buildBeszelHubEnvironment(beszel config.Beszel, domain string, env Environment) map[string]string {
+// buildBeszelHubLabels cria labels do Traefik para o Beszel Hub
+func (o *ObservabilityBuilderImpl) buildBeszelHubLabels(subdomain, project string, env Environment, tls config.TLS) map[string]string {
+	labels := map[string]string{
+		"traefik.enable":         "true",
+		"traefik.docker.network": project + "_traefik",
+		"traefik.http.services.beszel-hub.loadbalancer.server.port": "8090",
+		"traefik.http.routers.beszel-hub.rule":                      fmt.Sprintf("Host(`%s`)", subdomain),
+	}
+
+	if env.IsLocalhost() {
+		labels["traefik.http.routers.beszel-hub.entrypoints"] = "web"
+	} else {
+		labels["traefik.http.routers.beszel-hub.entrypoints"] = "web,websecure"
+		labels["traefik.http.routers.beszel-hub.tls"] = "true"
+		labels["traefik.http.routers.beszel-hub.tls.certresolver"] = tls.Resolver
+		labels["traefik.http.routers.beszel-hub.tls.domains[0].main"] = subdomain
+	}
+
+	return labels
+}
+
+// buildBeszelHubEnvironment cria variáveis de ambiente para o Hub
+func (o *ObservabilityBuilderImpl) buildBeszelHubEnvironment(beszel config.Beszel, domain string, env Environment) map[string]string {
 	environment := map[string]string{
 		"PORT": "8090",
 	}
 
-	// APP_URL baseado na documentação oficial
+	// APP_URL baseado na configuração ou gerado automaticamente
 	var appURL string
 	if beszel.AppURL != "" {
 		appURL = beszel.AppURL
 	} else {
-		// Gerar APP_URL automaticamente
 		if env.IsLocalhost() {
-			if domain == "localhost" {
-				appURL = "http://monitor.localhost"
-			} else {
-				appURL = fmt.Sprintf("http://monitor.%s", domain)
-			}
+			appURL = fmt.Sprintf("http://monitor.%s", domain)
 		} else {
 			appURL = fmt.Sprintf("https://monitor.%s", domain)
 		}
 	}
 	environment["APP_URL"] = appURL
 
-	// Configurações avançadas de autenticação
-	if beszel.DisablePasswordAuth {
-		environment["DISABLE_PASSWORD_AUTH"] = "true"
-	}
-
+	// Configurações opcionais
 	if beszel.UserCreation {
 		environment["USER_CREATION"] = "true"
+	}
+
+	return environment
+}
+
+// buildBeszelAgentEnvironment cria variáveis de ambiente para o Agent
+func (o *ObservabilityBuilderImpl) buildBeszelAgentEnvironment(beszel config.Beszel, domain string, env Environment) map[string]string {
+	environment := map[string]string{
+		"LISTEN": "/beszel_socket/beszel.sock", // Socket Unix para comunicação local
+	}
+
+	// HUB_URL para evitar avisos nos logs
+	var hubURL string
+	if env.IsLocalhost() {
+		hubURL = fmt.Sprintf("http://monitor.%s", domain)
+	} else {
+		hubURL = fmt.Sprintf("https://monitor.%s", domain)
+	}
+	environment["HUB_URL"] = hubURL
+
+	// Token de autenticação
+	if beszel.Token != "" {
+		environment["TOKEN"] = beszel.Token
+	}
+
+	// Chave pública SSH
+	if beszel.PublicKey != "" {
+		environment["KEY"] = beszel.PublicKey
 	}
 
 	return environment

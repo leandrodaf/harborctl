@@ -215,16 +215,17 @@ func (c *initCommand) runInteractiveSetup(ctx context.Context) error {
 	}
 
 	// Generate Beszel keys automatically if Beszel is enabled
-	var beszelHubKey, beszelToken string
+	var beszelHubKey, beszelPrivateKey, beszelToken string
 	if includeBeszel {
 		c.output.Info("🔐 Generating Beszel authentication keys...")
 
 		// Generate SSH key pair for Beszel authentication
-		pubKey, _, err := crypto.GenerateED25519KeyPair()
+		pubKey, privKey, err := crypto.GenerateED25519KeyPair()
 		if err != nil {
 			return fmt.Errorf("failed to generate Beszel SSH keys: %w", err)
 		}
 		beszelHubKey = pubKey
+		beszelPrivateKey = privKey
 
 		// Generate token for Beszel authentication
 		token, err := crypto.GenerateBeszelToken()
@@ -238,20 +239,21 @@ func (c *initCommand) runInteractiveSetup(ctx context.Context) error {
 
 	// Create configuration
 	options := config.CreateOptions{
-		Domain:         domain,
-		Email:          email,
-		Project:        project,
-		Environment:    env,
-		NoDozzle:       !includeDozzle,
-		NoBeszel:       !includeBeszel,
-		DozzleAuth:     dozzleAuth,
-		BeszelAuth:     false, // Sempre false - Beszel usa auth próprio
-		DozzleUsername: dozzleUsername,
-		DozzlePassword: dozzlePassword,
-		BeszelUsername: "", // Não usado
-		BeszelPassword: "", // Não usado
-		BeszelHubKey:   beszelHubKey,
-		BeszelToken:    beszelToken,
+		Domain:           domain,
+		Email:            email,
+		Project:          project,
+		Environment:      env,
+		NoDozzle:         !includeDozzle,
+		NoBeszel:         !includeBeszel,
+		DozzleAuth:       dozzleAuth,
+		BeszelAuth:       false, // Sempre false - Beszel usa auth próprio
+		DozzleUsername:   dozzleUsername,
+		DozzlePassword:   dozzlePassword,
+		BeszelUsername:   "", // Não usado
+		BeszelPassword:   "", // Não usado
+		BeszelHubKey:     beszelHubKey,
+		BeszelPrivateKey: beszelPrivateKey,
+		BeszelToken:      beszelToken,
 	}
 
 	// Show summary
@@ -294,16 +296,17 @@ func (c *initCommand) runDirectSetup(ctx context.Context, domain, email, project
 	}
 
 	// Generate Beszel keys automatically if Beszel is enabled
-	var beszelHubKey, beszelToken string
+	var beszelHubKey, beszelPrivateKey, beszelToken string
 	if !noBeszel {
 		c.output.Info("🔐 Generating Beszel authentication keys...")
 
 		// Generate SSH key pair for Beszel authentication
-		pubKey, _, err := crypto.GenerateED25519KeyPair()
+		pubKey, privKey, err := crypto.GenerateED25519KeyPair()
 		if err != nil {
 			return fmt.Errorf("failed to generate Beszel SSH keys: %w", err)
 		}
 		beszelHubKey = pubKey
+		beszelPrivateKey = privKey
 
 		// Generate token for Beszel authentication
 		token, err := crypto.GenerateBeszelToken()
@@ -316,17 +319,18 @@ func (c *initCommand) runDirectSetup(ctx context.Context, domain, email, project
 	}
 
 	options := config.CreateOptions{
-		Domain:         domain,
-		Email:          email,
-		Project:        project,
-		Environment:    env,
-		NoDozzle:       noDozzle,
-		NoBeszel:       noBeszel,
-		BeszelAuth:     false, // Sempre false - Beszel usa auth próprio
-		BeszelUsername: "",    // Não usado
-		BeszelPassword: "",    // Não usado
-		BeszelHubKey:   beszelHubKey,
-		BeszelToken:    beszelToken,
+		Domain:           domain,
+		Email:            email,
+		Project:          project,
+		Environment:      env,
+		NoDozzle:         noDozzle,
+		NoBeszel:         noBeszel,
+		BeszelAuth:       false, // Sempre false - Beszel usa auth próprio
+		BeszelUsername:   "",    // Não usado
+		BeszelPassword:   "",    // Não usado
+		BeszelHubKey:     beszelHubKey,
+		BeszelPrivateKey: beszelPrivateKey,
+		BeszelToken:      beszelToken,
 	}
 
 	return c.createProject(ctx, options)

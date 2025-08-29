@@ -174,10 +174,10 @@ func (c *EditServerCommand) showCurrentConfig(stack *config.Stack) {
 
 	if stack.Observability.Beszel.Enabled {
 		c.output.Info("   Beszel: ✅ Enabled")
-		if stack.Observability.Beszel.BasicAuth != nil && stack.Observability.Beszel.BasicAuth.Enabled {
-			c.output.Info("     Authentication: ✅ Protected")
+		if stack.Observability.Beszel.Token != "" && stack.Observability.Beszel.PublicKey != "" {
+			c.output.Info("     Authentication: ✅ Configured")
 		} else {
-			c.output.Info("     Authentication: ❌ Not protected")
+			c.output.Info("     Authentication: ⚠️  Needs configuration")
 		}
 	} else {
 		c.output.Info("   Beszel: ❌ Disabled")
@@ -318,7 +318,11 @@ func (c *EditServerCommand) editAuthSettings(stack *config.Stack) error {
 	case "Dozzle (log viewer)":
 		return c.configureServiceAuth(&stack.Observability.Dozzle.BasicAuth, "Dozzle")
 	case "Beszel (monitoring)":
-		return c.configureServiceAuth(&stack.Observability.Beszel.BasicAuth, "Beszel")
+		c.output.Info("")
+		c.output.Info("🔧 Beszel uses token-based authentication instead of BasicAuth")
+		c.output.Info("   Use: harborctl beszel-setup")
+		c.output.Info("   This will guide you through the configuration process")
+		return nil
 	}
 
 	return nil
