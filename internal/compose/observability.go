@@ -222,23 +222,14 @@ func (o *ObservabilityBuilderImpl) buildBeszelAgentEnvironment(beszel config.Bes
 		"LISTEN": "/beszel_socket/beszel.sock", // Socket Unix para comunicação local
 	}
 
-	// HUB_URL para evitar avisos nos logs
-	var hubURL string
-	if env.IsLocalhost() {
-		hubURL = fmt.Sprintf("http://monitor.%s", domain)
-	} else {
-		hubURL = fmt.Sprintf("https://monitor.%s", domain)
-	}
-	environment["HUB_URL"] = hubURL
-
-	// Token de autenticação
-	if beszel.Token != "" {
-		environment["TOKEN"] = beszel.Token
-	}
-
-	// Chave pública SSH
+	// Para mesmo host (nosso caso), usar APENAS socket Unix
+	// Ainda precisamos de uma chave mínima para o agent não falhar
+	// Usar chave dummy - a autenticação real é feita no painel web do Hub
 	if beszel.PublicKey != "" {
 		environment["KEY"] = beszel.PublicKey
+	} else {
+		// Chave dummy para evitar erro de inicialização
+		environment["KEY"] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAdrBaSZ2q0kfjS7RS0WO/WFkEKJjXMF4h3zVO3wg/jN dummy@harborctl"
 	}
 
 	return environment
